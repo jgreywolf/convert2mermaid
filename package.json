@@ -1,7 +1,7 @@
 {
-  "name": "TVSDX",
+  "name": "Visio2Mermaid",
   "version": "1.0.0",
-  "description": "convert Visio diagrams to mermaidJs syntax",
+  "description": "convert Visio diagrams into mermaidJs syntax",
   "license": "MIT",
   "type": "module",
   "author": "Justin Greywolf <jgreywolf@lostware.com>",
@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "TVSDX": "./dist/index.js"
+    "Visio2Mermaid": "./dist/index.js"
   },
   "dependencies": {
     "@inquirer/prompts": "^6.0.1",
