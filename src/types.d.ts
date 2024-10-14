@@ -22,6 +22,7 @@ export interface Page {
   Name: string;
   RelationID: string;
   Shapes: Shape[];
+  Connectors: Connector[];
 }
 
 export interface Shape {
@@ -30,10 +31,17 @@ export interface Shape {
   Type: string;
   TextColor: string;
   FillColor: string;
-  LineWeight: string;
-  LineColor: string;  
+  LineWeight: number;
+  LineColor: string;
   Text: string;
   ShapeType: string;
   IsHidden: boolean;
   Name: string;
+}
+
+export interface Connector extends Shape {
+  FromNode: string;
+  ToNode: string;
+  ArrowStart: boolean;
+  ArrowEnd: boolean;
 }
