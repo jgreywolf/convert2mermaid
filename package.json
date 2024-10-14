@@ -1,7 +1,7 @@
 {
-  "name": "Visio2Mermaid",
+  "name": "convert2mermaid",
   "version": "1.0.0",
-  "description": "convert Visio diagrams into mermaidJs syntax",
+  "description": "Convert diagrams from other formats into mermaidJs syntax",
   "license": "MIT",
   "type": "module",
   "author": "Justin Greywolf <jgreywolf@lostware.com>",
@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "Visio2Mermaid": "./dist/index.js"
+    "convert2mermaid": "./dist/index.js"
   },
   "dependencies": {
     "@inquirer/prompts": "^6.0.1",

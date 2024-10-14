@@ -1,20 +1,20 @@
-import { Command, Option, InvalidArgumentError } from "commander";
-import chalk from "chalk";
-import figlet from "figlet";
+import { Command, Option, InvalidArgumentError } from 'commander';
+import chalk from 'chalk';
+import figlet from 'figlet';
 
 const program = new Command();
 
-console.log(figlet.textSync("Visio2Mermaid"));
+console.log(figlet.textSync('convert2mermaid'));
 
 program
-  .version("1.0.0")
+  .version('1.0.0')
   .description(
-    "A utility to convert Visio diagrams to MermaidJs markdown syntax"
+    'A utility to convert diagrams in other formats to MermaidJs markdown syntax',
   )
-  .option("-i, --inputFile  <value>", "Input file")
-  .option("-o, --outputFile [value]", "Output file/format")
+  .option('-i, --inputFile  <value>', 'Input file')
+  .option('-o, --outputFile [value]', 'Output file/format')
   .action((options) => {
-    console.log(`Hello, ${options.name || "World"}!`);
+    console.log(`Hello, ${options.name || 'World'}!`);
   })
   .parse(process.argv);
 

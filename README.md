@@ -1,5 +1,7 @@
-# visio2mermaid
+# convert2mermaid
 
-This is a command-line interface (CLI) to export a diagram from Visio to [mermaid](https://mermaid.js.org/). It takes a Visio vsdx file as input, and will generate the corresponding mermaid syntax into a .mmd file or direct output.
+This is a command-line interface (CLI) to convert a diagram from one of the following types of files to [mermaid](https://mermaid.js.org/) syntax within a mmd file
+
+-   Visio (vsdx)
 
 ## Installation
