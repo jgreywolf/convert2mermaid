@@ -1,4 +1,4 @@
-import { getMermaidShapeByValue } from './shapes/flowchartShapes';
+import { getMermaidShapeByValue } from './shapes/flowchartShapes.js';
 import { Shape, Connector, Page } from './types';
 
 interface NodeRecord {
@@ -79,7 +79,6 @@ export class Scribe {
       });
     }
 
-    console.log(mermaidSyntax);
     return mermaidSyntax;
   };
 }

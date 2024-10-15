@@ -1,8 +1,8 @@
 import { Command } from 'commander';
 import figlet from 'figlet';
 import * as fs from 'fs';
-import { Parser } from './Parser';
-import { Scribe } from './Scribe';
+import { Parser } from './Parser.js';
+import { Scribe } from './Scribe.js';
 
 const program = new Command();
 
@@ -29,20 +29,24 @@ program
     'Type of diagram - defaults to flowchart',
     'flowchart'
   )
-  .action((options) => {
-    console.log(`Hello, ${options.name || 'World'}!`);
-  })
   .parse(process.argv);
 
 const options = program.opts();
 const outputFile =
   options.outputFile || options.inputFile.replace('.vsdx', '.mmd');
-const fileParser = new Parser(options.inputFile);
-const scribe = new Scribe();
 
-fileParser.parse();
-const pages = fileParser.getAllPages();
-for (const page of pages) {
-  const mermaidSyntax = scribe.writeMermaidCode(page);
-  fs.writeFileSync(outputFile, mermaidSyntax);
+parseData(options.inputFile);
+async function parseData(filepath: string) {
+  try {
+    const fileParser = new Parser(filepath);
+    const scribe = new Scribe();
+    await fileParser.parse();
+    const pages = fileParser.getAllPages();
+    for (const page of pages) {
+      const mermaidSyntax = scribe.writeMermaidCode(page);
+      fs.writeFileSync(outputFile, mermaidSyntax);
+    }
+  } catch (error) {
+    console.error('Error occurred while parsing source data!', error);
+  }
 }

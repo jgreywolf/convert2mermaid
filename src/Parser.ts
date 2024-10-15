@@ -6,31 +6,30 @@ import { Connector, Master, Page, Shape } from './types';
 
 export class Parser {
   jsonObjects: any = {};
-  filePath: string;
+  // filePath: string;
   archive: AdmZip;
   pages: Page[] = [];
   masters: Master[] = [];
   parsed: boolean = false;
 
   constructor(filePath: string) {
-    this.filePath = filePath;
-    const vsdxBuffer = fs.readFileSync(this.filePath);
+    //this.filePath = filePath;
+    const vsdxBuffer = fs.readFileSync(filePath);
     this.archive = new AdmZip(vsdxBuffer);
   }
 
   parse = async () => {
     const entries = this.archive.getEntries();
-
     for (const entry of entries) {
       if (entry.entryName.endsWith('.xml')) {
         const xmlContent = entry.getData().toString('utf-8');
 
         const jsonObj = await parseStringPromise(xmlContent);
+
         const nameStartIndex = entry.entryName.lastIndexOf('/') + 1;
         const fileName = entry.entryName
           .substring(nameStartIndex)
           .replace('.xml', '');
-
         if (fileName === 'masters') {
           this.parseMastersFile(jsonObj);
         }
@@ -58,26 +57,29 @@ export class Parser {
     try {
       for (let i = 0; i < this.pages.length; i++) {
         const page = this.pages[i];
+        let shapes = [] as Shape[];
+        let connectors = [] as Connector[];
 
         const pageObj =
           this.jsonObjects[page.Name.toLowerCase()]['PageContents'];
         const shapeObjects = pageObj['Shapes'][0];
-        const connectObjects = pageObj['Connects'][0]['Connect'];
-        let shapes = [] as Shape[];
-        let connectors = [] as Connector[];
 
         if (shapeObjects) {
           shapes = this.getShapesFromPage(shapeObjects);
         }
 
-        if (connectObjects) {
-          const connectShapes = shapes.filter(
-            (shape) => shape.Type === 'connector'
-          );
-          connectors = this.getConnectorsFromPage(
-            connectObjects,
-            connectShapes
-          );
+        if (pageObj['Connects']) {
+          const connectObjects = pageObj['Connects'][0]['Connect'];
+
+          if (connectObjects) {
+            const connectShapes = shapes.filter(
+              (shape) => shape.Type === 'connector'
+            );
+            connectors = this.getConnectorsFromPage(
+              connectObjects,
+              connectShapes
+            );
+          }
         }
 
         page.Shapes = shapes;

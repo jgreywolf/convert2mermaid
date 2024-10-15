@@ -6,12 +6,12 @@ let parser: Parser;
 let scribe: Scribe;
 
 describe('given a selection of Visio shape data', () => {
-  beforeAll(async () => {
-    const vsdxFilePath = 'src/tests/Drawing.vsdx';
-    parser = new Parser(vsdxFilePath);
-    await parser.parse();
-    scribe = new Scribe();
-  });
+  // beforeAll(async () => {
+  //   const vsdxFilePath = 'src/tests/Drawing.vsdx';
+  //   parser = new Parser(vsdxFilePath);
+  //   await parser.parse();
+  //   scribe = new Scribe();
+  // });
 
   it('should translate flowchart shapes', async () => {
     scribe = new Scribe();
