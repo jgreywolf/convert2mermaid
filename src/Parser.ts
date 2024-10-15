@@ -31,6 +31,7 @@ export class Parser {
         const fileName = entry.entryName
           .substring(nameStartIndex)
           .replace('.xml', '');
+
         switch (fileName) {
           case 'masters':
             this.parseMastersFile(jsonObj);
@@ -46,9 +47,11 @@ export class Parser {
         }
       }
     }
+
+    return this.getAllPages();
   };
 
-  getAllPages = () => {
+  private getAllPages = () => {
     if (!this.parsed) {
       this.parse();
     }

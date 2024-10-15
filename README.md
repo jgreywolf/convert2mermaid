@@ -6,9 +6,9 @@ This is a command-line interface (CLI) to convert a diagram from one of the foll
 
 ## Usage
 
--   run npm run build
--   node ./dist/index.js -i 'FilePath'
+-   `npm run build`
+-   `node ./dist/index.js -i 'FilePath'`
 -   Optional arguments are:
-    -   -o FILENAME - output filename (defaults to input file name)
-    -   -f FORMAT - file format for output file (defaults to mmd)
+    -   -o OUTPUTFILENAME - output filename (defaults to input file name)
+    -   -f OUTPUTFILEFORMAT - file format for output file (defaults to mmd)
     -   -d DIAGRAMTYPE - (only flowchart is accepted currently)
