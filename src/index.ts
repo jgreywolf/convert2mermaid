@@ -20,12 +20,12 @@ program
     'Output file name - defaults to input filename'
   )
   .option(
-    '-f, --outputFormat  [value]',
+    '-f, --outputFormat [value]',
     'Output format - defaults to mmd',
     'mmd'
   )
   .option(
-    '-d, --diagramType  [value]',
+    '-d, --diagramType [value]',
     'Type of diagram - defaults to flowchart',
     'flowchart'
   )

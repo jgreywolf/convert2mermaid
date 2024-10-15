@@ -4,6 +4,26 @@ export interface VisioDocument {
   Settings?: string;
 }
 
+export interface StyleSheet {
+  ID: string;
+  Name: string;
+  LineStyleRefId: string;
+  FillStyleRefId: string;
+  TextStyleRefId: string;
+  LineWeight: string;
+  LineColor: string;
+  LinePattern: string;
+  Rounding: string;
+  EndArrowSize: string;
+  BeginArrow: string;
+  EndArrow: string;
+  LineCap: string;
+  BeginArrowSize: string;
+  FillForegnd: string;
+  FillBkgnd: string;
+  FillPattern: string;
+}
+
 export interface Master {
   ID: string;
   Name: string;

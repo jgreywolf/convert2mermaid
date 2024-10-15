@@ -2,10 +2,11 @@
 import * as fs from 'fs';
 import AdmZip from 'adm-zip';
 import { parseStringPromise } from 'xml2js';
-import { Connector, Master, Page, Shape } from './types';
+import { Connector, Master, Page, Shape, StyleSheet } from './types';
 
 export class Parser {
   jsonObjects: any = {};
+  styleSheets: StyleSheet[] = [];
   // filePath: string;
   archive: AdmZip;
   pages: Page[] = [];
@@ -30,15 +31,19 @@ export class Parser {
         const fileName = entry.entryName
           .substring(nameStartIndex)
           .replace('.xml', '');
-        if (fileName === 'masters') {
-          this.parseMastersFile(jsonObj);
+        switch (fileName) {
+          case 'masters':
+            this.parseMastersFile(jsonObj);
+            break;
+          case 'pages':
+            this.parsePagesFile(jsonObj);
+            break;
+          case 'document':
+            this.parseDocumentProperties(jsonObj);
+            break;
+          default:
+            this.jsonObjects[fileName] = jsonObj;
         }
-        if (fileName === 'pages') {
-          this.parsePagesFile(jsonObj);
-          this.parsed = true;
-        }
-
-        this.jsonObjects[fileName] = jsonObj;
       }
     }
   };
@@ -93,6 +98,38 @@ export class Parser {
     return pageResults;
   };
 
+  private parseDocumentProperties = (jsonObj: any) => {
+    const stylesheets =
+      jsonObj['VisioDocument']['StyleSheets'][0]['StyleSheet'];
+
+    for (let i = 0; i < stylesheets.length; i++) {
+      const sheet = {} as StyleSheet;
+
+      sheet.ID = stylesheets[i]['$']['ID'];
+      sheet.Name = stylesheets[i]['$']['Name'];
+      sheet.LineStyleRefId = stylesheets[i]['$']['LineStyle'];
+      sheet.FillStyleRefId = stylesheets[i]['$']['FillStyle'];
+      sheet.TextStyleRefId = stylesheets[i]['$']['TextStyle'];
+
+      const cells = stylesheets[i]['Cell'];
+
+      sheet.LineWeight = this.getValueFromCell(cells, 'LineWeight');
+      sheet.LineColor = this.getValueFromCell(cells, 'LineColor');
+      sheet.LinePattern = this.getValueFromCell(cells, 'LinePattern');
+
+      sheet.Rounding = this.getValueFromCell(cells, 'Rounding');
+      sheet.EndArrowSize = this.getValueFromCell(cells, 'EndArrowSize');
+      sheet.BeginArrow = this.getValueFromCell(cells, 'BeginArrow');
+      sheet.EndArrow = this.getValueFromCell(cells, 'EndArrow');
+      sheet.LineCap = this.getValueFromCell(cells, 'LineCap');
+      sheet.BeginArrowSize = this.getValueFromCell(cells, 'BeginArrowSize');
+      sheet.FillForegnd = this.getValueFromCell(cells, 'FillForegnd');
+      sheet.FillBkgnd = this.getValueFromCell(cells, 'FillBkgnd');
+
+      this.styleSheets.push(sheet);
+    }
+  };
+
   private parseMastersFile = (jsonObj: any) => {
     const masters = jsonObj['Masters']['Master'];
 
@@ -100,13 +137,9 @@ export class Parser {
       const master = {} as Master;
       master.ID = masters[i]['$']['ID'];
       master.Name = masters[i]['$']['Name'];
-      master.NameU = masters[i]['$']['NameU'];
-      master.IsCustomName = masters[i]['$']['IsCustomName'];
-      master.IsCustomNameU = masters[i]['$']['IsCustomNameU'];
       master.UniqueID = masters[i]['$']['UniqueID'];
-      master.BaseID = masters[i]['$']['BaseID'];
       master.MasterType = masters[i]['$']['MasterType'];
-      master.RelID = masters[i]['$']['RelID'];
+      master.RelID = masters[i]['Rel'][0]['$']['r:id'];
       master.Hidden = masters[i]['$']['Hidden'];
 
       this.masters.push(master);
@@ -173,9 +206,8 @@ export class Parser {
       shape.MasterID = shapeContainer['$']['Master'];
       shape.Type = shapeContainer['$']['Type'];
 
-      const { name, shapeType, isHidden } = this.getShapeDataFromMaster(
-        shape.MasterID
-      );
+      const { name, shapeType, isHidden, masterRef } =
+        this.getShapeDataFromMaster(shape.MasterID);
 
       shape.ShapeType = shapeType;
       shape.IsHidden = isHidden;
@@ -195,14 +227,6 @@ export class Parser {
         shape.TextColor = this.getTextColor(shapeContainer['Section'][0]);
       }
 
-      const { FillColor, LineWeight, LineColor } = this.getShapeFormat(
-        shapeContainer['Cell']
-      );
-
-      shape.FillColor = FillColor;
-      shape.LineWeight = LineWeight;
-      shape.LineColor = LineColor;
-
       shapes.push(shape);
     }
 
@@ -213,36 +237,31 @@ export class Parser {
     let name = 'null';
     let shapeType = 'unknown';
     let isHidden = true;
+    let masterRef = '';
 
     const master = this.masters.find((master) => master.ID === masterID);
 
     if (master) {
       shapeType = master.Name;
-      name = master.NameU;
+      name = master.Name;
       isHidden = master.Hidden === '1' ? true : false;
+      masterRef = master.RelID;
     }
-    return { name, shapeType, isHidden };
+
+    return { name, shapeType, isHidden, masterRef };
   };
 
-  private getShapeFormat = (
-    arg0: any
-  ): { FillColor: string; LineWeight: number; LineColor: string } => {
-    let FillColor = 'ffffff';
-    let LineWeight = 0;
-    let LineColor = '000000';
+  private getValueFromCell = (cells: any, field: string) => {
+    let value = '';
 
-    for (let i = 0; i < arg0.length; i++) {
-      const cell = arg0[i];
-      if (cell['$']['N'] === 'LineWeight') {
-        LineWeight = cell['$']['V'];
-      } else if (cell['$']['N'] === 'LineColor') {
-        LineColor = cell['$']['V'];
-      } else if (cell['$']['N'] === 'FillBkgnd') {
-        FillColor = cell['$']['V'];
+    for (let i = 0; i < cells.length; i++) {
+      const cell = cells[i];
+      if (cell['$']['N'] === field) {
+        value = cell['$']['V'];
       }
     }
 
-    return { FillColor, LineWeight, LineColor };
+    return value;
   };
 
   private getTextColor = (arg0: any): string => {
