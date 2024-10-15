@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from 'fs';
 import AdmZip from 'adm-zip';
 import { parseStringPromise } from 'xml2js';
@@ -9,6 +10,7 @@ export class Parser {
   archive: AdmZip;
   pages: Page[] = [];
   masters: Master[] = [];
+  parsed: boolean = false;
 
   constructor(filePath: string) {
     this.filePath = filePath;
@@ -28,11 +30,13 @@ export class Parser {
         const fileName = entry.entryName
           .substring(nameStartIndex)
           .replace('.xml', '');
+
         if (fileName === 'masters') {
           this.parseMastersFile(jsonObj);
         }
         if (fileName === 'pages') {
           this.parsePagesFile(jsonObj);
+          this.parsed = true;
         }
 
         this.jsonObjects[fileName] = jsonObj;
@@ -40,9 +44,13 @@ export class Parser {
     }
   };
 
-  parseAllPages = () => {
+  getAllPages = () => {
+    if (!this.parsed) {
+      this.parse();
+    }
+
     if (this.pages.length === 0) {
-      throw new Error('No pages found - make sure you run parse() first');
+      throw new Error('No pages found - validate your source file');
     }
 
     const pageResults = [] as Page[];
@@ -64,11 +72,11 @@ export class Parser {
 
         if (connectObjects) {
           const connectShapes = shapes.filter(
-            (shape) => shape.Type === 'connector',
+            (shape) => shape.Type === 'connector'
           );
           connectors = this.getConnectorsFromPage(
             connectObjects,
-            connectShapes,
+            connectShapes
           );
         }
 
@@ -118,7 +126,7 @@ export class Parser {
 
   private getConnectorsFromPage = (
     connectObjects: any,
-    connectShapes: Shape[],
+    connectShapes: Shape[]
   ) => {
     const connectors = [] as Connector[];
 
@@ -126,10 +134,13 @@ export class Parser {
       const connectShape = connectShapes[i];
 
       const connects = connectObjects.filter(
-        (connect) => connect['$'].FromSheet === connectShape.ID,
+        // @ts-ignore
+        (connect) => connect['$'].FromSheet === connectShape.ID
       );
 
+      // @ts-ignore
       const fromNode = connects.find((c) => c['$'].FromCell === 'BeginX')['$'];
+      // @ts-ignore
       const toNode = connects.find((c) => c['$'].FromCell === 'EndX')['$'];
 
       const connector = {} as Connector;
@@ -161,7 +172,7 @@ export class Parser {
       shape.Type = shapeContainer['$']['Type'];
 
       const { name, shapeType, isHidden } = this.getShapeDataFromMaster(
-        shape.MasterID,
+        shape.MasterID
       );
 
       shape.ShapeType = shapeType;
@@ -183,7 +194,7 @@ export class Parser {
       }
 
       const { FillColor, LineWeight, LineColor } = this.getShapeFormat(
-        shapeContainer['Cell'],
+        shapeContainer['Cell']
       );
 
       shape.FillColor = FillColor;
@@ -212,7 +223,7 @@ export class Parser {
   };
 
   private getShapeFormat = (
-    arg0: any,
+    arg0: any
   ): { FillColor: string; LineWeight: number; LineColor: string } => {
     let FillColor = 'ffffff';
     let LineWeight = 0;

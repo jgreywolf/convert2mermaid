@@ -19,7 +19,7 @@ describe('given a selection of Visio shape data', () => {
     parser = new Parser(vsdxFilePath);
     await parser.parse();
 
-    const pages = parser.parseAllPages();
+    const pages = parser.getAllPages();
     const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n027@{ shape: rect, label: '' }
@@ -42,7 +42,7 @@ n039@{ shape: sm-circ, label: '' }`);
     parser = new Parser(vsdxFilePath);
     await parser.parse();
 
-    const pages = parser.parseAllPages();
+    const pages = parser.getAllPages();
     const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n012@{ shape: rect, label: '' }
@@ -66,7 +66,7 @@ n026@{ shape: brace-r, label: '' }`);
     parser = new Parser(vsdxFilePath);
     await parser.parse();
 
-    const pages = parser.parseAllPages();
+    const pages = parser.getAllPages();
     const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n040@{ shape: rect, label: '' }

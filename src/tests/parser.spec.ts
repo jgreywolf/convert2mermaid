@@ -8,7 +8,7 @@ describe('given a valid Visio file', () => {
     const parser = new Parser(vsdxFilePath);
 
     await parser.parse();
-    const pages = parser.parseAllPages();
+    const pages = parser.getAllPages();
     expect(pages.length).toBe(1);
   });
 
@@ -18,7 +18,7 @@ describe('given a valid Visio file', () => {
     const parser = new Parser(vsdxFilePath);
 
     await parser.parse();
-    const pages = parser.parseAllPages();
+    const pages = parser.getAllPages();
     expect(pages[0].Shapes.length).toBe(3);
     expect(pages[0].Shapes[0].Name).toBe('Decision');
   });
