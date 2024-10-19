@@ -16,4 +16,4 @@ This is a command-line interface (CLI) to convert a diagram from one of the foll
 ## ToDo:
 
 -   Add support for other diagram types (class diagram, sequence, etc)
--   Add support for other file types (Lucid Chart, Draw.io, Excalidraw, PlantUML, ...)
+-   Add support for other file types (Lucidchart, [drawio](drawio.md), [Excalidraw](excalidraw.md), PlantUML, others ...)
