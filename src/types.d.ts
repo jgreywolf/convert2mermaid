@@ -10,58 +10,60 @@ export interface StyleSheet {
   LineStyleRefId: string;
   FillStyleRefId: string;
   TextStyleRefId: string;
-  LineWeight: string;
-  LineColor: string;
-  LinePattern: string;
-  Rounding: string;
-  EndArrowSize: string;
-  BeginArrow: string;
-  EndArrow: string;
-  LineCap: string;
-  BeginArrowSize: string;
-  FillForegnd: string;
-  FillBkgnd: string;
-  FillPattern: string;
+  Style: Style;
 }
 
 export interface Master {
   ID: string;
   Name: string;
-  NameU: string;
-  IsCustomName: boolean;
-  IsCustomNameU: boolean;
   UniqueID: string;
   BaseID: string;
   MasterType: string;
-  RelID: string;
+  RelationshipId: string;
   Hidden: string;
+  LineStyleRefId: string;
+  FillStyleRefId: string;
+  TextStyleRefId: string;
 }
 
 export interface Page {
   ID: string;
   Name: string;
-  RelationID: string;
   Shapes: Shape[];
-  Connectors: Connector[];
+  Edges: Edge[];
+  RelationshipId: string;
 }
 
 export interface Shape {
   ID: string;
   MasterID: string;
   Type: string;
-  TextColor: string;
-  FillColor: string;
-  LineWeight: number;
-  LineColor: string;
   Text: string;
-  ShapeType: string;
-  IsHidden: boolean;
   Name: string;
+  Style: Style;
 }
 
-export interface Connector extends Shape {
+export interface Edge extends Shape {
   FromNode: string;
   ToNode: string;
-  ArrowStart: boolean;
-  ArrowEnd: boolean;
+}
+
+export interface Parser {
+  parseDiagram(): Promise<Page[]>;
+}
+
+export interface Style {
+  FillForeground: string;
+  FillBackground: string;
+  TextColor: string;
+  LineWeight: number;
+  LineColor: string;
+  LinePattern: number;
+  Rounding: number;
+  BeginArrow: number;
+  BeginArrowSize: number;
+  EndArrow: number;
+  EndArrowSize: number;
+  LineCap: number;
+  FillPattern: number;
 }

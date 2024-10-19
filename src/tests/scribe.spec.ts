@@ -1,25 +1,14 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { Scribe } from '../Scribe';
-import { Parser } from '../Parser';
-
-let parser: Parser;
-let scribe: Scribe;
+import { Scribe, writeMermaidCode } from '../Scribe';
+import { getFileParser, Parser } from '../../dist/parser/Parser';
 
 describe('given a selection of Visio shape data', () => {
-  // beforeAll(async () => {
-  //   const vsdxFilePath = 'src/tests/Drawing.vsdx';
-  //   parser = new Parser(vsdxFilePath);
-  //   await parser.parse();
-  //   scribe = new Scribe();
-  // });
-
   it('should translate flowchart shapes', async () => {
-    scribe = new Scribe();
     const vsdxFilePath = 'src/tests/FlowchartShapes.vsdx';
-    parser = new Parser(vsdxFilePath);
-    const pages = await parser.parse();
+    const parser = getFileParser(vsdxFilePath);
+    const pages = await parser.parseDiagram();
 
-    const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
+    const mermaidSyntax = writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n027@{ shape: rect, label: '' }
 n028@{ shape: diam, label: '' }
@@ -36,12 +25,11 @@ n039@{ shape: sm-circ, label: '' }`);
   });
 
   it('should translate basic shapes', async () => {
-    scribe = new Scribe();
     const vsdxFilePath = 'src/tests/BasicShapes.vsdx';
-    parser = new Parser(vsdxFilePath);
-    const pages = await parser.parse();
+    const parser = getFileParser(vsdxFilePath);
+    const pages = await parser.parseDiagram();
 
-    const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
+    const mermaidSyntax = writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n012@{ shape: rect, label: '' }
 n013@{ shape: rect, label: '' }
@@ -59,15 +47,28 @@ n026@{ shape: brace-r, label: '' }`);
   });
 
   it('should write edges', async () => {
-    scribe = new Scribe();
     const vsdxFilePath = 'src/tests/Connectors.vsdx';
-    parser = new Parser(vsdxFilePath);
-    const pages = await parser.parse();
+    const parser = getFileParser(vsdxFilePath);
+    const pages = await parser.parseDiagram();
 
-    const mermaidSyntax = scribe.writeMermaidCode(pages[0]);
+    const mermaidSyntax = writeMermaidCode(pages[0]);
     expect(mermaidSyntax).toContain(`flowchart TD
 n040@{ shape: rect, label: '' }
 n041@{ shape: rect, label: '' }
 n040 --> n041`);
+  });
+
+  it('should write style statements', async () => {
+    const vsdxFilePath = 'src/tests/DiagramWithStyles.vsdx';
+    const parser = getFileParser(vsdxFilePath);
+    const pages = await parser.parseDiagram();
+
+    const mermaidSyntax = writeMermaidCode(pages[0]);
+    expect(mermaidSyntax).toContain(`flowchart TD
+n01@{ shape: rect, label: Rect 1 }
+n02@{ shape: rect, label: Rect 2 }
+n02 -- connect 1 --> n01
+style n01 fill: #7f7f7f,stroke: #c05046
+linkStyle 0 stroke: #c05046`);
   });
 });

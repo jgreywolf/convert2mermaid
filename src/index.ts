@@ -1,10 +1,10 @@
 import { Command } from 'commander';
 import figlet from 'figlet';
 import * as fs from 'fs';
-import { Parser } from './Parser.js';
-import { Scribe } from './Scribe.js';
 import ora from 'ora';
 import path from 'path';
+import { getFileParser } from './parser/Parser.js';
+import { writeMermaidCode } from './Scribe.js';
 
 const program = new Command();
 const supportedFileTypes = ['.vsdx'];
@@ -13,15 +13,10 @@ console.log(figlet.textSync('convert2mermaid'));
 program
   .name('convert2mermaid')
   .version('1.0.0')
-  .description(
-    'A utility to convert diagrams in other formats to MermaidJs markdown syntax'
-  )
+  .description('A utility to convert diagrams in other formats to MermaidJs markdown syntax')
   .requiredOption('-i, --inputFile <value>', 'Input file')
   .option('-d, --diagramType [value]', 'Type of diagram', 'flowchart')
-  .option(
-    '-o, --outputFile [value]',
-    'Output file name - defaults to input filename'
-  )
+  .option('-o, --outputFile [value]', 'Output file name - defaults to input filename')
   .option('-f, --outputFormat [value]', 'Output format', 'mmd')
 
   .parse(process.argv);
@@ -29,9 +24,7 @@ program
 const options = program.opts();
 const fileExt = path.extname(options.inputFile);
 if (!supportedFileTypes.includes(fileExt)) {
-  console.error(
-    `Unsupported file type: ${fileExt}. Supported file types are: ${supportedFileTypes}`
-  );
+  console.error(`Unsupported file type: ${fileExt}. Supported file types are: ${supportedFileTypes}`);
   process.exit(1);
 }
 
@@ -39,24 +32,21 @@ parseData(options.inputFile);
 
 async function parseData(filepath: string) {
   try {
-    let outputFilePath =
-      options.outputFile || options.inputFile.replace(fileExt, '.mmd');
+    let outputFilePath = options.outputFile || options.inputFile.replace(fileExt, '.mmd');
 
-    const fileParser = new Parser(filepath);
-    const scribe = new Scribe();
-    const pages = await fileParser.parse();
+    const fileParser = getFileParser(filepath);
+    const pages = await fileParser.parseDiagram();
     const pageCount = pages.length;
     let currentPageIndex = 1;
 
+    const spinner = ora(`Processing ${pageCount} page${pageCount > 1 ? 's' : ''}`).start();
+
     for (const page of pages) {
       if (pageCount > 1) {
-        outputFilePath = outputFilePath.replace(
-          '.mmd',
-          `_${currentPageIndex}.mmd`
-        );
+        outputFilePath = outputFilePath.replace('.mmd', `_${currentPageIndex}.mmd`);
       }
-      const spinner = ora(`Processing page ${page.Name}`).start();
-      const mermaidSyntax = scribe.writeMermaidCode(page);
+      console.log(`Working on ${page.Name}...`);
+      const mermaidSyntax = writeMermaidCode(page);
       fs.writeFileSync(outputFilePath, mermaidSyntax);
       if (pageCount > 1) {
         currentPageIndex++;

@@ -114,7 +114,6 @@ export const getMermaidShapeByValue = (shape: string): MermaidShape => {
       return MermaidShape.Circle;
     case 'odd':
       return MermaidShape.Odd;
-
     case 'small circle':
     case 'start':
     case 'on-page reference':
@@ -187,3 +186,13 @@ export const getMermaidShapeByValue = (shape: string): MermaidShape => {
 
   return MermaidShape.Rectangle;
 };
+
+export enum ArrowType {
+  None = 'none',
+  ArrowCross = 'arrow_cross',
+  DoubleArrowCross = 'double_arrow_cross',
+  ArrowPoint = 'arrow_point',
+  DoubleArrowPoint = 'double_arrow_point',
+  ArrowCircle = 'arrow_circle',
+  DoubleArrowCircle = 'double_arrow_circle',
+}
