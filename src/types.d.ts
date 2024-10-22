@@ -1,55 +1,16 @@
-export interface VisioDocument {
-  Masters: Master[];
-  Pages: Page[];
+export interface Diagram {
+  Shapes: Shape[];
   Settings?: string;
 }
 
-export interface StyleSheet {
-  ID: string;
-  Name: string;
-  LineStyleRefId: string;
-  FillStyleRefId: string;
-  TextStyleRefId: string;
-  Style: Style;
-}
-
-export interface Master {
-  ID: string;
-  Name: string;
-  UniqueID: string;
-  BaseID: string;
-  MasterType: string;
-  RelationshipId: string;
-  Hidden: string;
-  LineStyleRefId: string;
-  FillStyleRefId: string;
-  TextStyleRefId: string;
-}
-
-export interface Page {
-  ID: string;
-  Name: string;
-  Shapes: Shape[];
-  Edges: Edge[];
-  RelationshipId: string;
-}
-
 export interface Shape {
-  ID: string;
-  MasterID: string;
+  Id: string;
   Type: string;
-  Text: string;
-  Name: string;
+  Label: string;
   Style: Style;
-}
-
-export interface Edge extends Shape {
+  IsEdge: boolean;
   FromNode: string;
   ToNode: string;
-}
-
-export interface Parser {
-  parseDiagram(): Promise<Page[]>;
 }
 
 export interface Style {

@@ -3,8 +3,8 @@ import figlet from 'figlet';
 import * as fs from 'fs';
 import ora from 'ora';
 import path from 'path';
-import { getFileParser } from './parser/Parser.js';
-import { writeMermaidCode } from './Scribe.js';
+import { getParserFunctions } from './parser.js';
+import { generateMermaidCode } from './scribe.js';
 
 const program = new Command();
 const supportedFileTypes = ['.vsdx'];
@@ -32,30 +32,23 @@ parseData(options.inputFile);
 
 async function parseData(filepath: string) {
   try {
+    const spinner = ora(`Processing ${options.inputFile}`).start();
     let outputFilePath = options.outputFile || options.inputFile.replace(fileExt, '.mmd');
-
-    const fileParser = getFileParser(filepath);
-    const pages = await fileParser.parseDiagram();
-    const pageCount = pages.length;
-    let currentPageIndex = 1;
-
-    const spinner = ora(`Processing ${pageCount} page${pageCount > 1 ? 's' : ''}`).start();
-
-    for (const page of pages) {
-      if (pageCount > 1) {
-        outputFilePath = outputFilePath.replace('.mmd', `_${currentPageIndex}.mmd`);
-      }
-      console.log(`Working on ${page.Name}...`);
-      const mermaidSyntax = writeMermaidCode(page);
-      fs.writeFileSync(outputFilePath, mermaidSyntax);
-      if (pageCount > 1) {
-        currentPageIndex++;
-      }
-      spinner.succeed();
-      console.log(`Mermaid syntax written to ${outputFilePath}`);
+    const parserFunctions = getParserFunctions(filepath);
+    if (!parserFunctions) {
+      console.log(`Failed to find parser for ${options.inputFile}`);
+      process.exit(0);
     }
-    process.exit(0);
+
+    const diagram = await parserFunctions?.parseDiagram(filepath);
+    const mermaidSyntax = await generateMermaidCode(diagram);
+
+    fs.writeFileSync(outputFilePath, mermaidSyntax);
+    spinner.succeed();
+    console.log(`Mermaid syntax written to ${outputFilePath}`);
   } catch (error) {
     console.error('Error occurred while parsing source data!', error);
   }
+
+  process.exit(0);
 }

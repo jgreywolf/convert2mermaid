@@ -1,5 +1,5 @@
 import { getMermaidShapeByValue } from './shapes/flowchartShapes.js';
-import { Shape, Edge, Page, Style } from './types';
+import { Diagram, Shape, Style } from './types.js';
 
 interface NodeRecord {
   ID: string;
@@ -8,30 +8,28 @@ interface NodeRecord {
 }
 
 const shapeToNode = (shape: Shape) => {
-  const nodeId = `n0${shape.ID}`;
-  const nodeShape = getMermaidShapeByValue(shape.Name);
-  const nodeDef = `${nodeId}@{ shape: ${nodeShape}, label: ${shape.Text} }`;
+  const nodeId = `n0${shape.Id}`;
+  const nodeShape = getMermaidShapeByValue(shape.Type);
+  const nodeDef = `${nodeId}@{ shape: ${nodeShape}, label: ${shape.Label} }`;
   return { ID: nodeId, Shape: shape, NodeDef: nodeDef };
 };
 
-const shapeToConnector = (shape: Shape, connectors: Edge[]) => {
-  const edge = shape as Edge;
-  const connector = connectors.find((c) => c.ID === shape.ID);
-  if (connector) {
-    edge.FromNode = `n0${connector.FromNode}`;
-    edge.ToNode = `n0${connector.ToNode}`;
-  }
+const shapeToConnector = (connectorShape: Shape) => {
+  const edge = connectorShape;
+  edge.FromNode = `n0${connectorShape.FromNode}`;
+  edge.ToNode = `n0${connectorShape.ToNode}`;
+
   return edge;
 };
 
-export const writeMermaidCode = (page: Page) => {
+export const generateMermaidCode = (diagram: Diagram) => {
   const nodes: NodeRecord[] = [];
-  const edges: Edge[] = [];
+  const edges: Shape[] = [];
   const styles: string[] = [];
 
-  for (const shape of page.Shapes) {
-    if (shape.Type === 'connector') {
-      edges.push(shapeToConnector(shape, page.Edges));
+  for (const shape of diagram.Shapes) {
+    if (shape.IsEdge) {
+      edges.push(shapeToConnector(shape));
     } else {
       nodes.push(shapeToNode(shape));
     }
@@ -42,7 +40,7 @@ export const writeMermaidCode = (page: Page) => {
 
   let mermaidSyntax = 'flowchart TD\r\n';
   nodes.forEach((node) => {
-    if (node.Shape.Type === 'connector') {
+    if (node.Shape.IsEdge) {
       return;
     }
 
@@ -50,9 +48,10 @@ export const writeMermaidCode = (page: Page) => {
     if (index < nodeCount - 1) {
       mermaidSyntax += '\r\n';
     }
-    const style = getStyleStatement(node.Shape.Style);
-    if (style) {
-      styles.push(`style ${node.ID} ${style}`);
+
+    const nodeStyle = getStyleStatement(node.Shape.Style);
+    if (nodeStyle) {
+      styles.push(`style ${node.ID} ${nodeStyle}`);
     }
     index++;
   });
@@ -66,7 +65,7 @@ export const writeMermaidCode = (page: Page) => {
       const edgeStart = `${edge.FromNode}`;
       const edgeEnd = `${edge.ToNode}`;
 
-      mermaidSyntax += buildEdgeStatement(edgeStart, edgeEnd, edge.Style, edge.Text);
+      mermaidSyntax += buildEdgeStatement(edgeStart, edgeEnd, edge.Style, edge.Label);
 
       if (index < edgeCount - 1) {
         mermaidSyntax += '\r\n';
@@ -183,17 +182,26 @@ const buildEdgeStatement = (start: string, end: string, style: Style, text: stri
   let startArrow = getArrow(style.BeginArrow);
   let endArrow = getArrow(style.EndArrow);
 
-  if (startArrow === '&') {
-    startArrow = '<';
+  switch (startArrow) {
+    case '>':
+      startArrow = '<';
+      break;
+    case '&':
+      startArrow = '';
   }
-  if (startArrow === '&') {
-    startArrow = '>';
+
+  // we are making an assumption here that if the EndArrow prop was NaN, then default to normal arrow
+  if (endArrow === '&') {
+    endArrow = '>';
   }
 
   let { startStroke, endStroke } = getStroke(style.LinePattern);
+  if (startArrow === '' && text === '') {
+    startStroke = '';
+  }
 
   if (startArrow === '<' && endArrow === '') {
-    return `${end} ${endStroke} ${text} ${startStroke}> ${start}`;
+    return `${end} ${endStroke}${text}${startStroke}> ${start}`;
   }
 
   return `${start} ${startArrow}${startStroke}${text}${endStroke}${endArrow} ${end}`;
@@ -219,6 +227,10 @@ const getStroke = (linePattern: number) => {
 };
 
 function getArrow(arrow: number): string {
+  if (isNaN(arrow)) {
+    return '&';
+  }
+
   switch (arrow) {
     case 0:
       return '';
@@ -226,6 +238,6 @@ function getArrow(arrow: number): string {
     case 7:
       return 'o';
     default:
-      return '&';
+      return '>';
   }
 }
