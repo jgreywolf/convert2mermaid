@@ -9,8 +9,8 @@ export interface Shape {
   Label: string;
   Style: Style;
   IsEdge: boolean;
-  FromNode: string;
-  ToNode: string;
+  FromNode?: string;
+  ToNode?: string;
 }
 
 export interface Style {

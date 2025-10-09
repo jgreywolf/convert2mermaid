@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+title Sample PlantUML Flowchart
+
+start
+:User submits form;
+if (Data valid?) then (yes)
+  :Process data;
+  :Save to database;
+  :Send confirmation;
+else (no)
+  :Show error message;
+endif
+:End process;
+stop
+
+@enduml

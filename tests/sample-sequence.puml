@@ -1,0 +1,17 @@
+@startuml
+!theme plain
+title Sample PlantUML Sequence Diagram
+
+actor User
+participant "Frontend" as FE
+participant "Backend" as BE
+database "Database" as DB
+
+User -> FE: Submit form
+FE -> BE: POST /api/data
+BE -> DB: INSERT query
+DB --> BE: Success
+BE --> FE: 200 OK
+FE --> User: Confirmation
+
+@enduml

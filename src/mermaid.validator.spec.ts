@@ -134,11 +134,29 @@ describe('Mermaid Syntax Validation', () => {
         console.log('Expected failure: DrawIO edge labels need fixing');
       }
     });
+
+    it('should generate valid Mermaid syntax from AllBasicAndFlowchartShapes.drawio', async () => {
+      await testFileConversion('tests/AllBasicAndFlowchartShapes.drawio', 'flowchart');
+    });
+
+    it('should generate valid Mermaid syntax from EdgesArrowsAndStyling.drawio', async () => {
+      await testFileConversion('tests/EdgesArrowsAndStyling.drawio', 'flowchart');
+    });
   });
 
   describe('Excalidraw File Conversion', () => {
     it('should generate valid Mermaid syntax from excalidraw-allshapes-edges.excalidraw', async () => {
       await testFileConversion('tests/excalidraw-allshapes-edges.excalidraw', 'flowchart');
+    });
+  });
+
+  describe('PlantUML File Conversion', () => {
+    it('should generate valid Mermaid syntax from sample-sequence.puml', async () => {
+      await testFileConversion('tests/sample-sequence.puml', 'flowchart');
+    });
+
+    it('should generate valid Mermaid syntax from sample-flowchart.puml', async () => {
+      await testFileConversion('tests/sample-flowchart.puml', 'flowchart');
     });
   });
 

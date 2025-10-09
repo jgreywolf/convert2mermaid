@@ -85,10 +85,12 @@ export const getMermaidShapeByValue = (shape: string): MermaidShape => {
     case 'database':
     case 'cylinder':
     case 'can':
+    case 'cyls': // Added for PlantUML support
       return MermaidShape.Database;
     case 'diamond':
     case 'decision':
     case 'question':
+    case 'diam': // Added for PlantUML support
       return MermaidShape.Diamond;
     case 'prepare':
     case 'hexagon':
@@ -111,6 +113,7 @@ export const getMermaidShapeByValue = (shape: string): MermaidShape => {
       return MermaidShape.DoubleCircle;
     case 'circle':
     case 'center drag circle':
+    case 'circ': // Added for PlantUML support
       return MermaidShape.Circle;
     case 'odd':
       return MermaidShape.Odd;

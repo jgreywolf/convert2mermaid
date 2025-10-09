@@ -9,7 +9,7 @@ import { Diagram } from './types.js';
 import { parseData } from './parser.js';
 
 const program = new Command();
-const supportedFileTypes = ['.vsdx', '.drawio', '.excalidraw'];
+const supportedFileTypes = ['.vsdx', '.drawio', '.excalidraw', '.puml', '.plantuml'];
 
 console.log(figlet.textSync('convert2mermaid'));
 program

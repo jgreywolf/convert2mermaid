@@ -2,6 +2,7 @@ import { parseVisioFile, VisioFile, VisioShape } from 'vsdx-js';
 import { Diagram, Shape, Style } from './types.js';
 import * as drawioParser from './parser/drawioParser.js';
 import * as excalidrawParser from './parser/excalidrawParser.js';
+import * as plantumlParser from './parser/plantumlParser.js';
 
 // Convert VisioShape from vsdx-js to our internal Shape interface
 const convertVisioShapeToShape = (visioShape: VisioShape): Shape => {
@@ -56,6 +57,11 @@ export async function parseData(filepath: string): Promise<Diagram | undefined> 
       }
       case 'excalidraw': {
         diagram = await excalidrawParser.parseDiagram(filepath);
+        break;
+      }
+      case 'puml':
+      case 'plantuml': {
+        diagram = await plantumlParser.parseDiagram(filepath);
         break;
       }
       default: {

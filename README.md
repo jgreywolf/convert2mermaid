@@ -36,15 +36,23 @@ node ./dist/index.js -i tests/drawio.drawio
 node ./dist/index.js -i tests/excalidraw.excalidraw
 ```
 
+### PlantUML Files
+
+```bash
+node ./dist/index.js -i tests/sample-sequence.puml
+node ./dist/index.js -i tests/sample-flowchart.puml
+```
+
 ## Recently Completed
 
 -   ✅ Updated to use vsdx-js v1.1.1 for better Visio support
 -   ✅ Added support for DrawIO (.drawio) files
 -   ✅ Added support for Excalidraw (.excalidraw) files
+-   ✅ Added support for PlantUML (.puml, .plantuml) files
 
 ## ToDo:
 
 -   Add support for other diagram types (class diagram, sequence, etc)
--   Add support for other file types (Lucidchart, PlantUML, others ...)
+-   Add support for other file types (Lucidchart, others ...)
 -   Enhanced styling support for all formats
 -   Multi-page diagram support
