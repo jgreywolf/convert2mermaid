@@ -12,8 +12,8 @@ export interface ParseError extends Error {
  * Creates a standardized parse error with additional context
  */
 export const createParseError = (
-  message: string, 
-  filePath?: string, 
+  message: string,
+  filePath?: string,
   context?: string,
   lineNumber?: number
 ): ParseError => {
@@ -68,8 +68,8 @@ export const safeFileRead = (filePath: string): Buffer => {
  * Validates required properties on an object
  */
 export const validateRequiredProperties = <T extends Record<string, unknown>>(
-  obj: unknown, 
-  requiredProps: (keyof T)[], 
+  obj: unknown,
+  requiredProps: (keyof T)[],
   context: string
 ): T => {
   if (!obj || typeof obj !== 'object') {

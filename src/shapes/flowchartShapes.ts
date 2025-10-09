@@ -45,34 +45,34 @@ export enum MermaidShape {
   PaperTape = 'flag',
 }
 
-import { 
-  mapBasicShapes, 
-  mapDocumentShapes, 
-  mapStorageShapes, 
-  mapProcessShapes, 
-  mapInputOutputShapes, 
-  mapSpecializedShapes 
+import {
+  mapBasicShapes,
+  mapDocumentShapes,
+  mapStorageShapes,
+  mapProcessShapes,
+  mapInputOutputShapes,
+  mapSpecializedShapes,
 } from './shapeMappers.js';
 
 export const getMermaidShapeByValue = (shape: string): MermaidShape => {
   const value = shape.toLowerCase();
-  
+
   // Try each category of shapes
   const basicShape = mapBasicShapes(value);
   if (basicShape) return basicShape;
-  
+
   const documentShape = mapDocumentShapes(value);
   if (documentShape) return documentShape;
-  
+
   const storageShape = mapStorageShapes(value);
   if (storageShape) return storageShape;
-  
+
   const processShape = mapProcessShapes(value);
   if (processShape) return processShape;
-  
+
   const ioShape = mapInputOutputShapes(value);
   if (ioShape) return ioShape;
-  
+
   const specializedShape = mapSpecializedShapes(value);
   if (specializedShape) return specializedShape;
 

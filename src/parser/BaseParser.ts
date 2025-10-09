@@ -68,7 +68,7 @@ export abstract class BaseParser {
    */
   protected sanitizeLabel(label: string): string {
     if (!label) return '';
-    
+
     return label
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
@@ -84,9 +84,7 @@ export abstract class BaseParser {
    */
   protected generateNodeId(originalId: string): string {
     // Convert to safe Mermaid node ID format
-    return originalId
-      .replace(/[^a-zA-Z0-9]/g, '_')
-      .replace(/^[0-9]/, 'n$&'); // Ensure it doesn't start with a number
+    return originalId.replace(/[^a-zA-Z0-9]/g, '_').replace(/^[0-9]/, 'n$&'); // Ensure it doesn't start with a number
   }
 
   /**
@@ -94,21 +92,13 @@ export abstract class BaseParser {
    */
   protected validateFileStructure(data: unknown, requiredProps: string[]): void {
     if (!data || typeof data !== 'object') {
-      throw createParseError(
-        'Invalid file structure: expected object',
-        this.filePath,
-        this.getParserName()
-      );
+      throw createParseError('Invalid file structure: expected object', this.filePath, this.getParserName());
     }
 
     const obj = data as Record<string, unknown>;
     for (const prop of requiredProps) {
       if (!(prop in obj)) {
-        throw createParseError(
-          `Missing required property: ${prop}`,
-          this.filePath,
-          this.getParserName()
-        );
+        throw createParseError(`Missing required property: ${prop}`, this.filePath, this.getParserName());
       }
     }
   }

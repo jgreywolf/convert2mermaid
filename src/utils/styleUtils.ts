@@ -26,7 +26,7 @@ export const mapArrowTypeToNumber = (arrowType: string | null | undefined): numb
   if (!arrowType) return 0;
 
   const normalizedType = arrowType.toLowerCase();
-  
+
   switch (normalizedType) {
     case 'arrow':
     case 'triangle':
@@ -60,7 +60,7 @@ export const mapLinePatternToNumber = (pattern: string | undefined): number => {
   if (!pattern) return 0;
 
   const normalizedPattern = pattern.toLowerCase();
-  
+
   switch (normalizedPattern) {
     case 'solid':
       return 0;
@@ -85,7 +85,7 @@ export const mapFillPatternToNumber = (pattern: string | undefined): number => {
   if (!pattern) return 0;
 
   const normalizedPattern = pattern.toLowerCase();
-  
+
   switch (normalizedPattern) {
     case 'none':
     case 'transparent':

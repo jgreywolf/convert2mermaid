@@ -2,7 +2,12 @@
 import * as fs from 'fs';
 import { Diagram, Shape, Style } from '../types.js';
 import { MermaidShape, getMermaidShapeByValue } from '../shapes/flowchartShapes.js';
-import { createDefaultStyle, mapArrowTypeToNumber, mapLinePatternToNumber, mapFillPatternToNumber } from '../utils/styleUtils.js';
+import {
+  createDefaultStyle,
+  mapArrowTypeToNumber,
+  mapLinePatternToNumber,
+  mapFillPatternToNumber,
+} from '../utils/styleUtils.js';
 
 export interface ExcalidrawElement {
   type: string;
@@ -158,7 +163,7 @@ const createStyleFromExcalidrawElement = (element: ExcalidrawElement): Style => 
   // Map stroke style to line pattern using utility function
   style.LinePattern = mapLinePatternToNumber(element.strokeStyle);
 
-  // Map fill style to fill pattern using utility function  
+  // Map fill style to fill pattern using utility function
   style.FillPattern = mapFillPatternToNumber(element.fillStyle);
 
   return style;

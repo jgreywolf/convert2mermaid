@@ -187,7 +187,7 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
 
   // Special handling for combined styles
   const combinedStyle = stylePairs.join(';').toLowerCase();
-  
+
   // Handle ellipse;shape=cloud pattern
   if (combinedStyle.includes('ellipse') && combinedStyle.includes('shape=cloud')) {
     shape.ShapeType = getMermaidShapeByValue('rectangle'); // Could be cloud in future
@@ -219,7 +219,7 @@ const mapDrawIOShapeToMermaid = (drawioShape: string): MermaidShape => {
     document: 'document',
     parallelogram: 'parallelogram',
     trapezoid: 'trapezoid',
-    
+
     // DrawIO-specific shapes
     step: 'rectangle',
     tape: 'paper-tape',
@@ -237,7 +237,7 @@ const mapDrawIOShapeToMermaid = (drawioShape: string): MermaidShape => {
     orEllipse: 'circle',
     sumEllipse: 'circle',
     sortShape: 'diamond',
-    
+
     // Flowchart namespace shapes - map to standard terms getMermaidShapeByValue recognizes
     'mxgraph.flowchart.database': 'database',
     'mxgraph.flowchart.decision': 'diamond',
