@@ -7,10 +7,43 @@ interface NodeRecord {
   NodeDef: string;
 }
 
+const sanitizeLabel = (label: string): string => {
+  if (!label) return '';
+
+  // Strip colons entirely to avoid Mermaid syntax conflicts
+  let sanitized = label.replace(/:/g, '');
+
+  // Replace line breaks with <br/> for Mermaid
+  sanitized = sanitized.replace(/\r?\n/g, '<br/>');
+
+  // Replace multiple spaces with single space
+  sanitized = sanitized.replace(/\s+/g, ' ');
+
+  // Trim whitespace
+  sanitized = sanitized.trim();
+
+  return sanitized;
+};
+
+const sanitizeEdgeLabel = (label: string): string => {
+  if (!label) return '';
+
+  const sanitized = sanitizeLabel(label);
+
+  // If edge label has no spaces and is alphanumeric, it might cause parsing issues
+  // Quote such labels to avoid syntax conflicts
+  if (sanitized && !sanitized.includes(' ') && !sanitized.includes('<br/>')) {
+    return `"${sanitized}"`;
+  }
+
+  return sanitized;
+};
+
 const shapeToNode = (shape: Shape) => {
   const nodeId = `n0${shape.Id}`;
-  const nodeShape = getMermaidShapeByValue(shape.Type);
-  const nodeDef = `${nodeId}@{ shape: ${nodeShape}, label: ${shape.Label} }`;
+  const nodeShape = getMermaidShapeByValue(shape.ShapeType);
+  const sanitizedLabel = sanitizeLabel(shape.Label);
+  const nodeDef = `${nodeId}@{ shape: ${nodeShape}, label: ${sanitizedLabel} }`;
   return { ID: nodeId, Shape: shape, NodeDef: nodeDef };
 };
 
@@ -182,6 +215,9 @@ const buildEdgeStatement = (start: string, end: string, style: Style, text: stri
   let startArrow = getArrow(style.BeginArrow);
   let endArrow = getArrow(style.EndArrow);
 
+  // Sanitize the edge label text with special handling for edge labels
+  const sanitizedText = sanitizeEdgeLabel(text);
+
   switch (startArrow) {
     case '>':
       startArrow = '<';
@@ -196,15 +232,15 @@ const buildEdgeStatement = (start: string, end: string, style: Style, text: stri
   }
 
   let { startStroke, endStroke } = getStroke(style.LinePattern);
-  if (startArrow === '' && text === '') {
+  if (startArrow === '' && sanitizedText === '') {
     startStroke = '';
   }
 
   if (startArrow === '<' && endArrow === '') {
-    return `${end} ${endStroke}${text}${startStroke}> ${start}`;
+    return `${end} ${endStroke}${sanitizedText}${startStroke}> ${start}`;
   }
 
-  return `${start} ${startArrow}${startStroke}${text}${endStroke}${endArrow} ${end}`;
+  return `${start} ${startArrow}${startStroke}${sanitizedText}${endStroke}${endArrow} ${end}`;
 };
 
 const getStroke = (linePattern: number) => {
@@ -233,11 +269,40 @@ function getArrow(arrow: number): string {
 
   switch (arrow) {
     case 0:
-      return '';
+      return ''; // No arrow
+    case 1:
+      return '>'; // Basic arrow
+    case 2:
+      return 'x'; // Cross arrow (supported in flowcharts)
+    case 3:
+      return 'o'; // Circle (hollow) (supported in flowcharts)
+    case 4:
+      return 'o'; // Circle (filled) - map to hollow circle for flowchart compatibility
+    case 5:
+      return '>'; // Square - map to standard arrow for flowchart compatibility
     case 6:
+      return 'o'; // Diamond (hollow) - map to circle for flowchart compatibility
     case 7:
-      return 'o';
+      return 'o'; // Diamond (filled) - map to circle for flowchart compatibility
+    case 8:
+      return '>'; // Triangle outline - map to standard arrow for flowchart compatibility
+    case 9:
+      return '>'; // Triangle filled (standard arrow)
+    case 10:
+      return '>'; // Bar/line end - map to standard arrow for flowchart compatibility
+    case 11:
+      return 'o'; // Crowfoot many - map to circle for flowchart compatibility
+    case 12:
+      return 'o'; // Crowfoot one or many - map to circle for flowchart compatibility
     default:
-      return '>';
+      return '>'; // Default to standard arrow
   }
 }
+
+// TODO: For future diagram types (ERD, Class diagrams, etc.), consider supporting additional arrow types:
+// case 4: return '*'; // Circle (filled) - for ERD/Class diagrams
+// case 5: return ']'; // Square - for ERD/Class diagrams
+// case 8: return '<'; // Triangle outline - for ERD/Class diagrams
+// case 10: return '|'; // Bar/line end - for ERD/Class diagrams
+// case 11: return '}'; // Crowfoot many - for ERD diagrams
+// case 12: return '{'; // Crowfoot one or many - for ERD diagrams

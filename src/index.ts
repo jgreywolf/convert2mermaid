@@ -3,11 +3,13 @@ import figlet from 'figlet';
 import * as fs from 'fs';
 import ora from 'ora';
 import path from 'path';
-import { getParserFunctions } from './parser.js';
+// import * as drawIoParser from './parser/drawioParser.js';
 import { generateMermaidCode } from './scribe.js';
+import { Diagram } from './types.js';
+import { parseData } from './parser.js';
 
 const program = new Command();
-const supportedFileTypes = ['.vsdx'];
+const supportedFileTypes = ['.vsdx', '.drawio', '.excalidraw'];
 
 console.log(figlet.textSync('convert2mermaid'));
 program
@@ -28,20 +30,21 @@ if (!supportedFileTypes.includes(fileExt)) {
   process.exit(1);
 }
 
-parseData(options.inputFile);
+processFile(options.inputFile);
 
-async function parseData(filepath: string) {
+async function processFile(filepath: string) {
+  const spinner = ora(`Processing ${filepath}`).start();
+  let outputFilePath = options.outputFile || filepath.replace(fileExt, '.mmd');
+
+  let diagram = await parseData(filepath);
+
+  if (!diagram) {
+    console.error(`No diagram detected in  ${filepath}, quitting.`);
+    process.exit(0);
+  }
+
   try {
-    const spinner = ora(`Processing ${options.inputFile}`).start();
-    let outputFilePath = options.outputFile || options.inputFile.replace(fileExt, '.mmd');
-    const parserFunctions = getParserFunctions(filepath);
-    if (!parserFunctions) {
-      console.log(`Failed to find parser for ${options.inputFile}`);
-      process.exit(0);
-    }
-
-    const diagram = await parserFunctions?.parseDiagram(filepath);
-    const mermaidSyntax = await generateMermaidCode(diagram);
+    const mermaidSyntax = generateMermaidCode(diagram);
 
     fs.writeFileSync(outputFilePath, mermaidSyntax);
     spinner.succeed();

@@ -1,18 +1,70 @@
-import { Diagram } from './types';
-import { VisioStyleSheet } from './parser/types';
-import * as visioParser from './parser/visioParser.js';
+import { parseVisioFile, VisioFile, VisioShape } from 'vsdx-js';
+import { Diagram, Shape, Style } from './types.js';
+import * as drawioParser from './parser/drawioParser.js';
+import * as excalidrawParser from './parser/excalidrawParser.js';
 
-export type ParseDiagramFunction = (filePath: string) => Diagram;
-export type ParseDocumentStylesheets = (jsonObj: any) => VisioStyleSheet[];
-
-export const getParserFunctions = (filePath: string) => {
-  const extension = filePath.split('.').pop();
-  switch (extension) {
-    case 'vsdx': {
-      return visioParser;
-    }
-    default: {
-      return;
-    }
-  }
+// Convert VisioShape from vsdx-js to our internal Shape interface
+const convertVisioShapeToShape = (visioShape: VisioShape): Shape => {
+  return {
+    Id: visioShape.Id,
+    ShapeType: visioShape.Type,
+    Label: visioShape.Label,
+    Style: {
+      FillForeground: visioShape.Style.FillForeground,
+      FillBackground: visioShape.Style.FillBackground,
+      TextColor: visioShape.Style.TextColor,
+      LineWeight: visioShape.Style.LineWeight,
+      LineColor: visioShape.Style.LineColor,
+      LinePattern: visioShape.Style.LinePattern,
+      Rounding: visioShape.Style.Rounding,
+      BeginArrow: visioShape.Style.BeginArrow,
+      BeginArrowSize: visioShape.Style.BeginArrowSize,
+      EndArrow: visioShape.Style.EndArrow,
+      EndArrowSize: visioShape.Style.EndArrowSize,
+      LineCap: visioShape.Style.LineCap,
+      FillPattern: visioShape.Style.FillPattern,
+    },
+    IsEdge: visioShape.IsEdge,
+    FromNode: visioShape.FromNode,
+    ToNode: visioShape.ToNode,
+  };
 };
+
+export async function parseData(filepath: string): Promise<Diagram | undefined> {
+  let diagram: Diagram | undefined = undefined;
+
+  try {
+    const extension = filepath.split('.').pop();
+    switch (extension) {
+      case 'vsdx': {
+        const visioFile: VisioFile = await parseVisioFile(filepath);
+
+        // Get shapes from the first page (assuming single page for now)
+        if (visioFile.Pages && visioFile.Pages.length > 0) {
+          const firstPage = visioFile.Pages[0];
+          const convertedShapes = firstPage.Shapes.map(convertVisioShapeToShape);
+
+          diagram = {
+            Shapes: convertedShapes,
+          };
+        }
+        break;
+      }
+      case 'drawio': {
+        diagram = await drawioParser.parseDiagram(filepath);
+        break;
+      }
+      case 'excalidraw': {
+        diagram = await excalidrawParser.parseDiagram(filepath);
+        break;
+      }
+      default: {
+        console.log(`Failed to find parser for ${filepath}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error parsing file: ${error}`);
+  }
+
+  return diagram;
+}

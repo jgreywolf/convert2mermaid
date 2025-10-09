@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "moduleResolution": "node",
+    "target": "es2019",
+    "module": "ES2022",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
     //"lib": ["es2021"],
     "sourceMap": true,
     "removeComments": true,

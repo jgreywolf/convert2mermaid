@@ -5,7 +5,7 @@ export interface Diagram {
 
 export interface Shape {
   Id: string;
-  Type: string;
+  ShapeType: string;
   Label: string;
   Style: Style;
   IsEdge: boolean;
