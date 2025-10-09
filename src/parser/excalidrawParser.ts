@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as fs from 'fs';
 import { Diagram, Shape, Style } from '../types.js';
+import { MermaidShape, getMermaidShapeByValue } from '../shapes/flowchartShapes.js';
+import { createDefaultStyle, mapArrowTypeToNumber, mapLinePatternToNumber, mapFillPatternToNumber } from '../utils/styleUtils.js';
 
 export interface ExcalidrawElement {
   type: string;
@@ -102,8 +104,8 @@ export const getShapes = (excalidrawData: ExcalidrawFile): Shape[] => {
 
       // Store arrow information for later processing
       if (element.startArrowhead || element.endArrowhead) {
-        shape.Style.BeginArrow = mapArrowheadToNumber(element.startArrowhead);
-        shape.Style.EndArrow = mapArrowheadToNumber(element.endArrowhead);
+        shape.Style.BeginArrow = mapArrowTypeToNumber(element.startArrowhead);
+        shape.Style.EndArrow = mapArrowTypeToNumber(element.endArrowhead);
       }
     }
 
@@ -113,47 +115,22 @@ export const getShapes = (excalidrawData: ExcalidrawFile): Shape[] => {
   return shapes;
 };
 
-// Map Excalidraw arrowhead types to numeric values
-const mapArrowheadToNumber = (arrowhead: string | null | undefined): number => {
-  if (!arrowhead) return 0;
-
-  switch (arrowhead) {
-    case 'arrow':
-    case 'triangle':
-      return 1; // Standard arrow
-    case 'triangle_outline':
-      return 2; // Outline arrow
-    case 'circle':
-      return 6; // Circle arrow (using existing enum value)
-    case 'circle_outline':
-      return 7; // Circle outline arrow
-    case 'diamond':
-      return 8; // Diamond arrow
-    case 'diamond_outline':
-      return 9; // Diamond outline arrow
-    case 'crowfoot_many':
-    case 'crowfoot_one_or_many':
-      return 10; // Crow's foot notation
-    default:
-      return 0; // No arrow
-  }
-};
-
-// Map Excalidraw shape types to our internal shape types
-const mapExcalidrawShapeToMermaid = (excalidrawType: string): string => {
-  const shapeMap: Record<string, string> = {
+// Map Excalidraw shape types to MermaidShape enum using getMermaidShapeByValue
+const mapExcalidrawShapeToMermaid = (excalidrawType: string): MermaidShape => {
+  const excalidrawToStandardMap: Record<string, string> = {
     rectangle: 'rectangle',
     diamond: 'diamond',
     ellipse: 'circle',
     triangle: 'triangle',
-    text: 'text',
+    text: 'rectangle', // Text blocks as rectangles
     arrow: 'arrow',
     line: 'line',
     freedraw: 'line',
     image: 'rectangle',
   };
 
-  return shapeMap[excalidrawType.toLowerCase()] || 'rectangle';
+  const standardName = excalidrawToStandardMap[excalidrawType.toLowerCase()] || 'rectangle';
+  return getMermaidShapeByValue(standardName);
 };
 
 // Check if the element type represents an edge/connector
@@ -178,53 +155,11 @@ const createStyleFromExcalidrawElement = (element: ExcalidrawElement): Style => 
     style.LineWeight = element.strokeWidth;
   }
 
-  // Map stroke style to line pattern
-  if (element.strokeStyle) {
-    switch (element.strokeStyle) {
-      case 'dashed':
-        style.LinePattern = 1;
-        break;
-      case 'dotted':
-        style.LinePattern = 2;
-        break;
-      default:
-        style.LinePattern = 0; // solid
-    }
-  }
+  // Map stroke style to line pattern using utility function
+  style.LinePattern = mapLinePatternToNumber(element.strokeStyle);
 
-  // Map fill style to fill pattern
-  if (element.fillStyle) {
-    switch (element.fillStyle) {
-      case 'solid':
-        style.FillPattern = 1;
-        break;
-      case 'hachure':
-        style.FillPattern = 2;
-        break;
-      case 'cross-hatch':
-        style.FillPattern = 6;
-        break;
-      default:
-        style.FillPattern = 0; // no fill
-    }
-  }
+  // Map fill style to fill pattern using utility function  
+  style.FillPattern = mapFillPatternToNumber(element.fillStyle);
 
   return style;
 };
-
-// Create a default style object
-const createDefaultStyle = (): Style => ({
-  FillForeground: '',
-  FillBackground: '',
-  TextColor: '',
-  LineWeight: 1,
-  LineColor: '#000000',
-  LinePattern: 0,
-  Rounding: 0,
-  BeginArrow: 0,
-  BeginArrowSize: 0,
-  EndArrow: 0,
-  EndArrowSize: 0,
-  LineCap: 0,
-  FillPattern: 0,
-});

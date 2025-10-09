@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { parseStringPromise } from 'xml2js';
 import { Diagram, Shape, Style } from '../types.js';
 import { MermaidShape, getMermaidShapeByValue } from '../shapes/flowchartShapes.js';
+import { createDefaultStyle, mapArrowTypeToNumber } from '../utils/styleUtils.js';
 
 export interface DrawIOCell {
   id: string;
@@ -169,10 +170,10 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
         shape.Style.LinePattern = 2; // dashed
         break;
       case 'endarrow':
-        shape.Style.EndArrow = mapDrawIOArrowType(value);
+        shape.Style.EndArrow = mapArrowTypeToNumber(value);
         break;
       case 'startarrow':
-        shape.Style.BeginArrow = mapDrawIOArrowType(value);
+        shape.Style.BeginArrow = mapArrowTypeToNumber(value);
         break;
       case 'endfill':
         shape.Style.EndArrowSize = value === '1' ? 1 : 0;
@@ -272,37 +273,3 @@ const mapDrawIOShapeToMermaid = (drawioShape: string): MermaidShape => {
   const standardName = drawioToStandardMap[drawioShape.toLowerCase()] || drawioShape;
   return getMermaidShapeByValue(standardName);
 };
-
-// Map DrawIO arrow types to our internal arrow types
-const mapDrawIOArrowType = (arrowType: string): number => {
-  const arrowMap: Record<string, number> = {
-    classic: 1, // standard arrow
-    block: 2, // filled arrow
-    oval: 4, // circle
-    diamond: 6, // diamond
-    cross: 8, // cross/x
-    none: 0, // no arrow
-    open: 1, // open arrow
-    openAsync: 1, // open arrow
-    blockThin: 2, // thin filled arrow
-  };
-
-  return arrowMap[arrowType.toLowerCase()] || 1;
-};
-
-// Create a default style object
-const createDefaultStyle = (): Style => ({
-  FillForeground: '',
-  FillBackground: '',
-  TextColor: '',
-  LineWeight: 1,
-  LineColor: '',
-  LinePattern: 0,
-  Rounding: 0,
-  BeginArrow: 0,
-  BeginArrowSize: 0,
-  EndArrow: 0,
-  EndArrowSize: 0,
-  LineCap: 0,
-  FillPattern: 0,
-});

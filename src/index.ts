@@ -3,7 +3,6 @@ import figlet from 'figlet';
 import * as fs from 'fs';
 import ora from 'ora';
 import path from 'path';
-// import * as drawIoParser from './parser/drawioParser.js';
 import { generateMermaidCode } from './scribe.js';
 import { Diagram } from './types.js';
 import { parseData } from './parser.js';

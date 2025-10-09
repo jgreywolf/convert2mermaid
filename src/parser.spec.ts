@@ -1,10 +1,10 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-// import { generateMermaidCode } from './scribe';
-// import { Diagram } from './types';
+import { describe, expect, it } from 'vitest';
 import { parseData } from './parser.js';
 
-describe('given a selection of Visio shape data', () => {
-  it('should translate flowchart shapes', async () => {
+describe('Parser Integration Tests', () => {
+  it('should parse Visio files without errors', async () => {
     const diagram = await parseData('tests/Connectors.vsdx');
+    expect(diagram).toBeDefined();
+    expect(diagram?.Shapes).toBeDefined();
   });
 });

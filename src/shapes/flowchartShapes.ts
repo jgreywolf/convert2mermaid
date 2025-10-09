@@ -45,76 +45,44 @@ export enum MermaidShape {
   PaperTape = 'flag',
 }
 
+import { 
+  mapBasicShapes, 
+  mapDocumentShapes, 
+  mapStorageShapes, 
+  mapProcessShapes, 
+  mapInputOutputShapes, 
+  mapSpecializedShapes 
+} from './shapeMappers.js';
+
 export const getMermaidShapeByValue = (shape: string): MermaidShape => {
   const value = shape.toLowerCase();
+  
+  // Try each category of shapes
+  const basicShape = mapBasicShapes(value);
+  if (basicShape) return basicShape;
+  
+  const documentShape = mapDocumentShapes(value);
+  if (documentShape) return documentShape;
+  
+  const storageShape = mapStorageShapes(value);
+  if (storageShape) return storageShape;
+  
+  const processShape = mapProcessShapes(value);
+  if (processShape) return processShape;
+  
+  const ioShape = mapInputOutputShapes(value);
+  if (ioShape) return ioShape;
+  
+  const specializedShape = mapSpecializedShapes(value);
+  if (specializedShape) return specializedShape;
+
+  // Handle remaining special cases
   switch (value) {
-    case 'rounded':
-    case 'rounded rectangle':
-    case 'event':
-      return MermaidShape.Rounded;
-    case 'process':
-    case 'rectangle':
-      return MermaidShape.Rectangle;
-    case 'card':
-    case 'custom 2':
-      return MermaidShape.NotchedRect;
-    case 'lined-process':
-    case 'lined-rectangle':
-    case 'shaded-rectangle':
-    case 'shaded-process':
-      return MermaidShape.LinedShadedRect;
-    case 'processes':
-    case 'stacked process':
-      return MermaidShape.MultiRect;
-    case 'tagged-process':
-      return MermaidShape.TaggedRect;
-    case 'pill':
-    case 'terminal':
-    case 'start/end':
-      return MermaidShape.Stadium;
-    case 'extract':
-    case 'triangle':
-      return MermaidShape.Triangle;
     case 'manual-file':
     case 'rotated triangle':
       return MermaidShape.RotatedTriangle;
-    case 'subroutine':
-    case 'subprocess':
-    case 'framedRect':
-      return MermaidShape.FramedRect;
-    case 'database':
-    case 'cylinder':
-    case 'can':
-    case 'cyls': // Added for PlantUML support
-      return MermaidShape.Database;
-    case 'diamond':
-    case 'decision':
-    case 'question':
-    case 'diam': // Added for PlantUML support
-      return MermaidShape.Diamond;
-    case 'prepare':
-    case 'hexagon':
-      return MermaidShape.Hexagon;
-    case 'in-out':
-    case 'lean-right':
-    case 'parallelogram':
-    case 'data':
-      return MermaidShape.DataInputOutput;
-    case 'out-in':
-    case 'lean-left':
-      return MermaidShape.DataOutputInput;
-    case 'priority':
-    case 'trapezoid':
-      return MermaidShape.Trapezoid;
-    case 'manual':
-    case 'inv_trapezoid':
-      return MermaidShape.FlippedTrapezoid;
     case 'doublecircle':
       return MermaidShape.DoubleCircle;
-    case 'circle':
-    case 'center drag circle':
-    case 'circ': // Added for PlantUML support
-      return MermaidShape.Circle;
     case 'odd':
       return MermaidShape.Odd;
     case 'small circle':
@@ -132,59 +100,12 @@ export const getMermaidShapeByValue = (shape: string): MermaidShape => {
     case 'comment right':
     case 'right brace':
       return MermaidShape.CommentRight;
-    case 'bolt':
-    case 'com-link':
-      return MermaidShape.LightningBolt;
-    case 'doc':
-    case 'document':
-      return MermaidShape.Document;
-    case 'lined-document':
-      return MermaidShape.LinedDocument;
-    case 'documents':
-    case 'stacked-document':
-      return MermaidShape.MultiDocument;
-    case 'tagged-document':
-      return MermaidShape.TaggedDocument;
-    case 'delay':
-      return MermaidShape.Delay;
-    case 'horizontal-cylinder':
-    case 'das':
-    case 'direct access storage':
-      return MermaidShape.DirectAccessStorage;
-    case 'disk storage':
-    case 'linedcylinder':
-      return MermaidShape.DiskStorage;
-    case 'display':
-    case 'curved-trapezoid':
-      return MermaidShape.Display;
-    case 'divided-process':
-    case 'dividedrectangle':
-      return MermaidShape.DividedRect;
-    case 'internalstorage':
-    case 'windowpane':
-      return MermaidShape.InternalStorage;
     case 'junction':
     case 'filledcircle':
       return MermaidShape.FilledCircle;
-    case 'loop-limit':
-    case 'trapezoidalpentagon':
-      return MermaidShape.LoopLimit;
-    case 'manual-input':
-    case 'slopedrect':
-      return MermaidShape.ManualInput;
-    case 'flag':
-    case 'paper-tape':
-      return MermaidShape.PaperTape;
-    case 'stored-data':
-    case 'bowtie':
-    case 'external data':
-      return MermaidShape.StoredData;
     case 'summary':
     case 'crossedcircle':
       return MermaidShape.CrossCircle;
-    case 'collate':
-    case 'hourglass':
-      return MermaidShape.Collate;
   }
 
   return MermaidShape.Rectangle;

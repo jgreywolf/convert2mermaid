@@ -10,8 +10,16 @@ yarn-error.log
 test-positive/*.out.md
 test-output/
 
-# Ignore generated mermaid output files in tests directory
-tests/*.mmd
+# Ignore generated mermaid output files
+*.mmd
+!tests/*.puml
+!tests/*.drawio
+!tests/*.excalidraw
+!tests/*.vsdx
+
+# Ignore temporary and test output files
+test-output.*
+temp.*
 
 # these are no longer used, but may still be in people's git folders
 fontawesome/
