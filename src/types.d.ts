@@ -1,6 +1,9 @@
+import { DiagramAnalysis } from './detection/types.js';
+
 export interface Diagram {
   Shapes: Shape[];
   Settings?: string;
+  Analysis?: DiagramAnalysis;
 }
 
 export interface Shape {

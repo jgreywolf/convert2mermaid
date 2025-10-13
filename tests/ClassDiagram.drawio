@@ -1,0 +1,53 @@
+<mxfile host="65bd71144e">
+    <diagram name="Class-Diagram" id="class-example">
+        <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Classes -->
+                <mxCell id="class1" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;User&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- id: int&lt;br&gt;- username: string&lt;br&gt;- email: string&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ login(): boolean&lt;br&gt;+ logout(): void&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="80" y="80" width="160" height="120" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="class2" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Account&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- accountId: int&lt;br&gt;- balance: decimal&lt;br&gt;- accountType: string&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ deposit(amount): void&lt;br&gt;+ withdraw(amount): boolean&lt;br&gt;+ getBalance(): decimal&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="360" y="80" width="180" height="120" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="class3" value="&lt;p style=&quot;margin:0px;margin-top:4px;text-align:center;&quot;&gt;&lt;b&gt;Transaction&lt;/b&gt;&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;- transactionId: int&lt;br&gt;- amount: decimal&lt;br&gt;- timestamp: datetime&lt;br&gt;- type: string&lt;/p&gt;&lt;hr size=&quot;1&quot;&gt;&lt;p style=&quot;margin:0px;margin-left:4px;&quot;&gt;+ execute(): boolean&lt;br&gt;+ rollback(): void&lt;/p&gt;" style="verticalAlign=top;align=left;overflow=fill;fontSize=12;fontFamily=Helvetica;html=1;" vertex="1" parent="1">
+                    <mxGeometry x="220" y="280" width="160" height="140" as="geometry"/>
+                </mxCell>
+                
+                <!-- Associations -->
+                <mxCell id="assoc1" value="owns" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="class1" target="class2">
+                    <mxGeometry width="160" relative="1" as="geometry">
+                        <mxPoint x="240" y="140" as="sourcePoint"/>
+                        <mxPoint x="360" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="assoc2" value="creates" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="class2" target="class3">
+                    <mxGeometry width="160" relative="1" as="geometry">
+                        <mxPoint x="450" y="200" as="sourcePoint"/>
+                        <mxPoint x="300" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="assoc3" value="initiates" style="endArrow=open;endFill=1;endSize=12;html=1;rounded=0;" edge="1" parent="1" source="class1" target="class3">
+                    <mxGeometry width="160" relative="1" as="geometry">
+                        <mxPoint x="160" y="200" as="sourcePoint"/>
+                        <mxPoint x="220" y="350" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Multiplicity labels -->
+                <mxCell id="mult1" value="1" style="resizable=0;html=1;whiteSpace=wrap;align=right;verticalAlign=bottom;" connectable="0" vertex="1" parent="assoc1">
+                    <mxGeometry x="1" relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="mult2" value="1..*" style="resizable=0;html=1;whiteSpace=wrap;align=left;verticalAlign=bottom;" connectable="0" vertex="1" parent="assoc1">
+                    <mxGeometry x="-1" relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

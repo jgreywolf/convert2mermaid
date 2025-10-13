@@ -1,0 +1,154 @@
+<mxfile host="65bd71144e">
+    <diagram name="Network-Diagram" id="network-example">
+        <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Network Devices -->
+                <mxCell id="router1" value="Router&#xa;192.168.1.1" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.routers.router;" vertex="1" parent="1">
+                    <mxGeometry x="350" y="50" width="78" height="53" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="switch1" value="Switch&#xa;24-Port" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.switches.workgroup_switch;" vertex="1" parent="1">
+                    <mxGeometry x="200" y="160" width="100" height="50" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="switch2" value="Switch&#xa;24-Port" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.switches.workgroup_switch;" vertex="1" parent="1">
+                    <mxGeometry x="500" y="160" width="100" height="50" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="firewall" value="Firewall" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.security.firewall;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="50" width="60" height="53" as="geometry"/>
+                </mxCell>
+                
+                <!-- Servers -->
+                <mxCell id="server1" value="Web Server&#xa;192.168.1.10" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.servers.server;" vertex="1" parent="1">
+                    <mxGeometry x="120" y="280" width="60" height="90" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="server2" value="Database Server&#xa;192.168.1.20" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.servers.server;" vertex="1" parent="1">
+                    <mxGeometry x="220" y="280" width="60" height="90" as="geometry"/>
+                </mxCell>
+                
+                <!-- Workstations -->
+                <mxCell id="pc1" value="PC-1&#xa;192.168.1.101" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.computers_and_peripherals.pc;" vertex="1" parent="1">
+                    <mxGeometry x="450" y="280" width="50" height="50" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="pc2" value="PC-2&#xa;192.168.1.102" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.computers_and_peripherals.pc;" vertex="1" parent="1">
+                    <mxGeometry x="520" y="280" width="50" height="50" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="pc3" value="PC-3&#xa;192.168.1.103" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.computers_and_peripherals.pc;" vertex="1" parent="1">
+                    <mxGeometry x="590" y="280" width="50" height="50" as="geometry"/>
+                </mxCell>
+                
+                <!-- Wireless -->
+                <mxCell id="wifi" value="Wireless AP&#xa;192.168.1.50" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.wireless.access_point;" vertex="1" parent="1">
+                    <mxGeometry x="680" y="160" width="60" height="50" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="laptop" value="Laptop&#xa;192.168.1.201" style="fontColor=#0066CC;fontStyle=1;align=center;verticalAlign=middle;childLayout=stackLayout;horizontal=1;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;marginBottom=0;sketch=0;pointerEvents=1;shape=mxgraph.cisco.computers_and_peripherals.laptop;" vertex="1" parent="1">
+                    <mxGeometry x="680" y="280" width="60" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Internet -->
+                <mxCell id="internet" value="Internet" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fontColor=#0066CC;fontStyle=1;" vertex="1" parent="1">
+                    <mxGeometry x="20" y="40" width="60" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Network Connections -->
+                <mxCell id="conn1" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="internet" target="firewall">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="80" y="76" as="sourcePoint"/>
+                        <mxPoint x="100" y="76" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn2" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="firewall" target="router1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="160" y="76" as="sourcePoint"/>
+                        <mxPoint x="350" y="76" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn3" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="router1" target="switch1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="350" y="103" as="sourcePoint"/>
+                        <mxPoint x="280" y="160" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn4" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="router1" target="switch2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="428" y="103" as="sourcePoint"/>
+                        <mxPoint x="520" y="160" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn5" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch1" target="server1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="210" as="sourcePoint"/>
+                        <mxPoint x="150" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn6" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch1" target="server2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="250" y="210" as="sourcePoint"/>
+                        <mxPoint x="250" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn7" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch2" target="pc1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="520" y="210" as="sourcePoint"/>
+                        <mxPoint x="475" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn8" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch2" target="pc2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="550" y="210" as="sourcePoint"/>
+                        <mxPoint x="545" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn9" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch2" target="pc3">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="580" y="210" as="sourcePoint"/>
+                        <mxPoint x="615" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn10" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;" edge="1" parent="1" source="switch2" target="wifi">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="600" y="185" as="sourcePoint"/>
+                        <mxPoint x="680" y="185" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn11" value="" style="endArrow=none;html=1;rounded=0;strokeWidth=2;strokeColor=#0066CC;dashed=1;" edge="1" parent="1" source="wifi" target="laptop">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="710" y="210" as="sourcePoint"/>
+                        <mxPoint x="710" y="280" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- VLAN Labels -->
+                <mxCell id="vlan1" value="VLAN 10&#xa;Servers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+                    <mxGeometry x="30" y="380" width="80" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="vlan2" value="VLAN 20&#xa;Workstations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+                    <mxGeometry x="130" y="380" width="80" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="vlan3" value="VLAN 30&#xa;Wireless" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+                    <mxGeometry x="230" y="380" width="80" height="40" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

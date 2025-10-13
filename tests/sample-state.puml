@@ -1,0 +1,16 @@
+@startuml
+!theme plain
+title Sample PlantUML State Diagram
+
+[*] --> Idle
+Idle : User waiting for input
+Idle --> Processing : user_input
+Processing : System processing data
+Processing --> Success : process_complete
+Processing --> Error : error_occurred
+Success --> Idle : reset
+Error --> Idle : retry
+Success --> [*] : exit
+Error --> [*] : exit
+
+@enduml

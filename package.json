@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "analyze": "node scripts/analyze-diagram.js"
   },
   "bin": {
     "convert2mermaid": "./dist/index.js"

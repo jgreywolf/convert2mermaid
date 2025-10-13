@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseData } from './parser.js';
+import { parseData } from './parser/parser.js';
 
 describe('Scribe Integration Tests', () => {
   it('should parse Visio connector files without errors', async () => {

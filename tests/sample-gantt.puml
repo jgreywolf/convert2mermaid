@@ -1,0 +1,18 @@
+@startgantt
+title Project Schedule
+dateFormat YYYY-MM-DD
+
+section Planning
+Planning Phase :plan, 2024-01-01, 30d
+Requirements Analysis :req, after plan, 20d
+
+section Development  
+Frontend Development :frontend, after req, 45d
+Backend Development :backend, after req, 60d
+Testing :test, after frontend, 30d
+
+section Deployment
+Production Setup :prod, after test, 15d
+Go Live :golive, after prod, 5d
+
+@endgantt

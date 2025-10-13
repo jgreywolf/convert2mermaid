@@ -1,0 +1,140 @@
+<mxfile host="65bd71144e">
+    <diagram name="ER-Diagram" id="er-example">
+        <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                
+                <!-- Entities -->
+                <mxCell id="entity1" value="Customer" style="whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="100" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="entity2" value="Order" style="whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="100" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="entity3" value="Product" style="whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="400" y="300" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="entity4" value="Category" style="whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="100" y="300" width="100" height="40" as="geometry"/>
+                </mxCell>
+                
+                <!-- Relationships -->
+                <mxCell id="rel1" value="Places" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="250" y="90" width="120" height="60" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="rel2" value="Contains" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="390" y="190" width="120" height="60" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="rel3" value="Belongs To" style="shape=rhombus;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="240" y="290" width="120" height="60" as="geometry"/>
+                </mxCell>
+                
+                <!-- Connections -->
+                <mxCell id="conn1" value="1" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="entity1" target="rel1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="200" y="120" as="sourcePoint"/>
+                        <mxPoint x="250" y="120" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn2" value="N" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="rel1" target="entity2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="370" y="120" as="sourcePoint"/>
+                        <mxPoint x="400" y="120" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn3" value="1" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="entity2" target="rel2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="450" y="140" as="sourcePoint"/>
+                        <mxPoint x="450" y="190" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn4" value="M" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="rel2" target="entity3">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="450" y="250" as="sourcePoint"/>
+                        <mxPoint x="450" y="300" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn5" value="N" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="entity3" target="rel3">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="400" y="320" as="sourcePoint"/>
+                        <mxPoint x="360" y="320" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="conn6" value="1" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="rel3" target="entity4">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="240" y="320" as="sourcePoint"/>
+                        <mxPoint x="200" y="320" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <!-- Attributes -->
+                <mxCell id="attr1" value="CustomerID" style="ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;" vertex="1" parent="1">
+                    <mxGeometry x="50" y="40" width="80" height="30" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="attr2" value="Name" style="ellipse;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="150" y="40" width="60" height="30" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="attr3" value="Email" style="ellipse;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="60" y="170" width="60" height="30" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="attr4" value="OrderID" style="ellipse;whiteSpace=wrap;html=1;align=center;fontStyle=4;" vertex="1" parent="1">
+                    <mxGeometry x="520" y="40" width="60" height="30" as="geometry"/>
+                </mxCell>
+                
+                <mxCell id="attr5" value="OrderDate" style="ellipse;whiteSpace=wrap;html=1;align=center;" vertex="1" parent="1">
+                    <mxGeometry x="480" y="160" width="80" height="30" as="geometry"/>
+                </mxCell>
+                
+                <!-- Attribute connections -->
+                <mxCell id="attr_conn1" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="attr1" target="entity1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="120" y="70" as="sourcePoint"/>
+                        <mxPoint x="140" y="100" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="attr_conn2" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="attr2" target="entity1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="170" y="70" as="sourcePoint"/>
+                        <mxPoint x="160" y="100" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="attr_conn3" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="attr3" target="entity1">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="110" y="170" as="sourcePoint"/>
+                        <mxPoint x="140" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="attr_conn4" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="attr4" target="entity2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="530" y="70" as="sourcePoint"/>
+                        <mxPoint x="480" y="100" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                
+                <mxCell id="attr_conn5" value="" style="endArrow=none;html=1;rounded=0;" edge="1" parent="1" source="attr5" target="entity2">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="500" y="160" as="sourcePoint"/>
+                        <mxPoint x="470" y="140" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

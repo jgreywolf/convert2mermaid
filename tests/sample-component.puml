@@ -1,0 +1,30 @@
+@startcomponent
+!theme plain
+title Sample PlantUML Component Diagram
+
+package "Web Application" {
+  [Frontend] as UI
+  [API Gateway] as API
+  [Authentication Service] as Auth
+}
+
+package "Backend Services" {
+  [User Service] as UserSvc
+  [Order Service] as OrderSvc
+  [Payment Service] as PaySvc
+}
+
+database "Database" {
+  [User DB] as UserDB
+  [Order DB] as OrderDB
+}
+
+UI --> API
+API --> Auth
+API --> UserSvc
+API --> OrderSvc
+UserSvc --> UserDB
+OrderSvc --> OrderDB
+OrderSvc --> PaySvc
+
+@endcomponent

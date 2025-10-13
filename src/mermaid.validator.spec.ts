@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
-import { parseData } from './parser.js';
+import { parseData } from './parser/parser.js';
 import { generateMermaidCode } from './scribe.js';
 
 describe('Mermaid Syntax Validation', () => {
@@ -11,9 +11,28 @@ describe('Mermaid Syntax Validation', () => {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-    // Check for basic flowchart syntax
-    if (!lines[0]?.match(/^flowchart\s+(TD|LR|TB|RL|BT)/)) {
-      errors.push('Missing or invalid flowchart declaration');
+    // Check for valid Mermaid diagram type declaration
+    const validDiagramTypes = [
+      /^flowchart\s+(TD|LR|TB|RL|BT)/,
+      /^sequenceDiagram/,
+      /^classDiagram/,
+      /^stateDiagram-v2/,
+      /^erDiagram/,
+      /^gantt/,
+      /^gitGraph/,
+      /^journey/,
+      /^pie/,
+      /^quadrantChart/,
+      /^requirementDiagram/,
+      /^C4Context/,
+      /^mindmap/,
+      /^timeline/,
+      /^block-beta/,
+    ];
+
+    const hasValidDiagramType = validDiagramTypes.some((pattern) => pattern.test(lines[0] || ''));
+    if (!hasValidDiagramType) {
+      errors.push('Missing or invalid diagram type declaration');
     }
 
     // Check node definitions and edge statements
@@ -93,8 +112,27 @@ describe('Mermaid Syntax Validation', () => {
     expect(mermaidCode).toBeDefined();
     expect(mermaidCode.length).toBeGreaterThan(0);
 
-    // Validate that it starts with the expected format
-    expect(mermaidCode.trim()).toMatch(/^flowchart\s+(TD|LR|TB|RL)/);
+    // Validate that it starts with a valid Mermaid diagram type
+    const validDiagramTypes = [
+      /^flowchart\s+(TD|LR|TB|RL)/,
+      /^sequenceDiagram/,
+      /^classDiagram/,
+      /^stateDiagram-v2/,
+      /^erDiagram/,
+      /^gantt/,
+      /^gitGraph/,
+      /^journey/,
+      /^pie/,
+      /^quadrantChart/,
+      /^requirementDiagram/,
+      /^C4Context/,
+      /^mindmap/,
+      /^timeline/,
+      /^block-beta/,
+    ];
+
+    const startsWithValidType = validDiagramTypes.some((pattern) => pattern.test(mermaidCode.trim()));
+    expect(startsWithValidType).toBe(true);
 
     // Validate Mermaid syntax
     const validation = validateMermaidSyntax(mermaidCode);

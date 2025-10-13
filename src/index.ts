@@ -5,7 +5,7 @@ import ora from 'ora';
 import path from 'path';
 import { generateMermaidCode } from './scribe.js';
 import { Diagram } from './types.js';
-import { parseData } from './parser.js';
+import { parseData } from './parser/parser.js';
 
 const program = new Command();
 const supportedFileTypes = ['.vsdx', '.drawio', '.excalidraw', '.puml', '.plantuml'];
@@ -40,6 +40,27 @@ async function processFile(filepath: string) {
   if (!diagram) {
     console.error(`No diagram detected in  ${filepath}, quitting.`);
     process.exit(0);
+  }
+
+  // Display detection results
+  if (diagram.Analysis) {
+    spinner.info(
+      `Detected diagram type: ${diagram.Analysis.detectedType} (${diagram.Analysis.confidence}% confidence)`
+    );
+
+    if (diagram.Analysis.patterns.length > 0) {
+      console.log('\nDetection evidence:');
+      diagram.Analysis.patterns.forEach((pattern) => {
+        console.log(`  - ${pattern.type}: ${pattern.evidence.join(', ')} (${pattern.confidence}%)`);
+      });
+    }
+
+    if (diagram.Analysis.metadata.totalShapes > 0) {
+      console.log(
+        `\nDiagram metadata: ${diagram.Analysis.metadata.totalShapes} shapes, ${diagram.Analysis.metadata.totalEdges} edges`
+      );
+    }
+    console.log(); // Empty line for spacing
   }
 
   try {
