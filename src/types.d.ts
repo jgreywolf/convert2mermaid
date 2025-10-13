@@ -14,6 +14,9 @@ export interface Shape {
   IsEdge: boolean;
   FromNode?: string;
   ToNode?: string;
+  // Sequence diagram specific properties
+  ParticipantType?: 'actor' | 'participant' | 'frame' | 'note' | 'activation';
+  FrameType?: 'par' | 'alt' | 'loop' | 'opt';
 }
 
 export interface Style {

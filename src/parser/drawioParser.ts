@@ -204,9 +204,38 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
     switch (key.toLowerCase()) {
       case 'shape':
         shape.ShapeType = mapDrawIOShapeToMermaid(value);
+        // Detect sequence diagram specific shapes
+        if (value === 'umlLifeline') {
+          shape.ParticipantType = 'participant';
+        } else if (value === 'umlFrame') {
+          shape.ParticipantType = 'frame';
+          // Frame type will be determined from the label (par, alt, loop, opt)
+          const label = shape.Label?.trim().toLowerCase();
+          if (label === 'par' || label === 'alt' || label === 'loop' || label === 'opt') {
+            shape.FrameType = label as 'par' | 'alt' | 'loop' | 'opt';
+          }
+        } else if (value === 'note') {
+          shape.ParticipantType = 'note';
+        }
+        break;
+      case 'participant':
+        // Check for umlActor participant type
+        if (value === 'umlActor') {
+          shape.ParticipantType = 'actor';
+        }
+        break;
+      case 'points':
+        // Shapes with points and perimeter=orthogonalPerimeter are activation boxes
+        if (styleString.includes('perimeter=orthogonalPerimeter')) {
+          shape.ParticipantType = 'activation';
+        }
         break;
       case 'fillcolor':
         shape.Style.FillForeground = value;
+        // Detect note shapes by their yellow fill color
+        if (value.toLowerCase() === '#ffff88' || value.toLowerCase() === 'yellow') {
+          shape.ParticipantType = 'note';
+        }
         break;
       case 'fontcolor':
         shape.Style.TextColor = value;
