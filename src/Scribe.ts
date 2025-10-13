@@ -164,8 +164,10 @@ const generateClassDiagram = (diagram: Diagram) => {
   const isCardinalityLabel = (shape: Shape): boolean => {
     const label = shape.Label?.trim() || '';
     // Check if it's a simple cardinality notation
-    return /^(\d+|\*|0\.\.1|1\.\.\*|0\.\.\*|\d+\.\.\d+|[mn])$/.test(label) || 
-           (label === '' && shape.Id.match(/^[_\-]?\d+$/) !== null);
+    return (
+      /^(\d+|\*|0\.\.1|1\.\.\*|0\.\.\*|\d+\.\.\d+|[mn])$/.test(label) ||
+      (label === '' && shape.Id.match(/^[_\-]?\d+$/) !== null)
+    );
   };
 
   // Separate classes from relationships and filter out cardinality labels
@@ -180,17 +182,16 @@ const generateClassDiagram = (diagram: Diagram) => {
   // Generate class definitions
   for (const classShape of classes) {
     const className = extractClassName(classShape.Label) || sanitizeClassName(classShape.Id);
-    
+
     // Skip if the class name is empty, just a number/symbol, or looks like a diagram root ID
-    if (!className || 
-        /^[_\-\d]+$/.test(className) || 
-        className.match(/^[A-Za-z0-9_-]{20,}[0-9]$/)) { // Skip long alphanumeric IDs ending in digit (likely root cells)
+    if (!className || /^[_\-\d]+$/.test(className) || className.match(/^[A-Za-z0-9_-]{20,}[0-9]$/)) {
+      // Skip long alphanumeric IDs ending in digit (likely root cells)
       continue;
     }
 
     // Parse class content (attributes and methods)
     const classContent = parseClassContent(classShape.Label);
-    
+
     // Skip completely empty classes (no label and no content)
     if (!classShape.Label && classContent.length === 0) {
       continue;
@@ -220,12 +221,12 @@ const generateClassDiagram = (diagram: Diagram) => {
       const relInfo = determineClassRelationshipType(rel);
       const relType = relInfo.type;
       const shouldReverse = relInfo.reverse;
-      
+
       // Reverse direction if needed (e.g., for inheritance arrows pointing backwards)
       if (shouldReverse) {
         [fromClass, toClass] = [toClass, fromClass];
       }
-      
+
       const label = rel.Label ? ` : ${sanitizeLabel(rel.Label)}` : '';
       mermaidSyntax += `  ${fromClass} ${relType} ${toClass}${label}\r\n`;
     }
@@ -280,18 +281,18 @@ const generateSequenceDiagram = (diagram: Diagram) => {
     if (!label || label.trim().length === 0) {
       return 'P' + Math.random().toString(36).substr(2, 4);
     }
-    
+
     // Try to create meaningful short alias
     // Split on common delimiters and take first letters or meaningful words
-    const words = label.split(/[\s/()]+/).filter(w => w.length > 0);
-    
+    const words = label.split(/[\s/()]+/).filter((w) => w.length > 0);
+
     if (words.length === 1) {
       // Single word - try first letter, then first 2-3 letters
       let alias = words[0].charAt(0).toUpperCase();
       if (existingAliases.has(alias)) {
         alias = words[0].substring(0, Math.min(3, words[0].length));
       }
-      
+
       // If still conflicts, add number
       let counter = 1;
       let finalAlias = alias;
@@ -301,13 +302,13 @@ const generateSequenceDiagram = (diagram: Diagram) => {
       return finalAlias;
     } else {
       // Multiple words - use initials
-      let alias = words.map(w => w.charAt(0).toUpperCase()).join('');
-      
+      let alias = words.map((w) => w.charAt(0).toUpperCase()).join('');
+
       // If too long, take first 4 characters
       if (alias.length > 4) {
         alias = alias.substring(0, 4);
       }
-      
+
       // Handle conflicts
       let counter = 1;
       let finalAlias = alias;
@@ -462,7 +463,7 @@ const extractStereotype = (label: string): string => {
 
   // Decode HTML entities FIRST, before removing tags
   let content = label.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
-  
+
   // Look for <<stereotype>> notation BEFORE removing HTML tags
   const stereotypeMatch = content.match(/<<([^>]+)>>/);
   if (stereotypeMatch) {
@@ -545,7 +546,7 @@ const parseClassContent = (label: string): string[] => {
   if (content.includes('<hr')) {
     // HTML format: Split by <hr> tags to separate sections
     const sections = content.split(/<hr[^>]*>/);
-    
+
     // Process each section after the first (skip title section)
     for (let i = 1; i < sections.length; i++) {
       const section = sections[i];
@@ -583,7 +584,7 @@ const parseClassContent = (label: string): string[] => {
   // Process each line
   for (const line of lines) {
     const cleanLine = line.trim();
-    
+
     if (!cleanLine) continue;
 
     // Skip horizontal lines and empty content
@@ -600,16 +601,21 @@ const parseClassContent = (label: string): string[] => {
         : cleanLine.startsWith('~')
         ? '~'
         : '+';
-      
+
       let method = cleanLine.replace(/^[+\-#~]\s*/, '').trim();
-      
+
       // Clean up double colons (::) that might appear in the format
       method = method.replace(/\s*:\s*:\s*/g, ': ');
-      
+
       if (method) {
         members.push(`${visibility}${method}`);
       }
-    } else if (cleanLine.startsWith('+') || cleanLine.startsWith('-') || cleanLine.startsWith('#') || cleanLine.startsWith('~')) {
+    } else if (
+      cleanLine.startsWith('+') ||
+      cleanLine.startsWith('-') ||
+      cleanLine.startsWith('#') ||
+      cleanLine.startsWith('~')
+    ) {
       // Attribute with visibility modifier
       const visibility = cleanLine.startsWith('+')
         ? '+'
@@ -620,7 +626,7 @@ const parseClassContent = (label: string): string[] => {
         : cleanLine.startsWith('~')
         ? '~'
         : '-';
-      
+
       const attribute = cleanLine.replace(/^[+\-#~]\s*/, '').trim();
       if (attribute) {
         members.push(`${visibility}${attribute}`);
@@ -716,7 +722,7 @@ const determineClassRelationshipType = (rel: Shape): { type: string; reverse: bo
 
   // Fallback: check label for relationship type keywords
   const label = rel.Label?.toLowerCase() || '';
-  
+
   if (label.includes('inherit') || label.includes('extends')) {
     return { type: '--|>', reverse: false };
   } else if (label.includes('implement') || label.includes('interface')) {

@@ -100,7 +100,12 @@ export const getShapes = (jsonObj: any): Shape[] => {
       }
 
       // Skip edge labels (they have connectable="0" and are attached to edges)
-      if (cellData.connectable === '0' && cellData.vertex === '1' && cellData.parent !== '1' && !swimlanes.has(cellData.parent || '')) {
+      if (
+        cellData.connectable === '0' &&
+        cellData.vertex === '1' &&
+        cellData.parent !== '1' &&
+        !swimlanes.has(cellData.parent || '')
+      ) {
         continue;
       }
 
@@ -116,8 +121,8 @@ export const getShapes = (jsonObj: any): Shape[] => {
         if (children.length > 0) {
           // Build class content with attributes and methods
           const childLabels = children
-            .filter(child => child.value && child.value.trim().length > 0)
-            .map(child => child.value)
+            .filter((child) => child.value && child.value.trim().length > 0)
+            .map((child) => child.value)
             .join('\n');
           if (childLabels) {
             label = `${label}\n---\n${childLabels}`;
@@ -153,22 +158,22 @@ export const getShapes = (jsonObj: any): Shape[] => {
           .replace(/&amp;/g, '&')
           .replace(/&#xa;/g, '\n') // Decode newline
           .replace(/&#xA;/g, '\n');
-        
+
         // Extract and temporarily store stereotypes
         const stereotypes: string[] = [];
         decodedLabel = decodedLabel.replace(/<<([^>]+)>>/g, (match) => {
           stereotypes.push(match);
           return `___STEREOTYPE_${stereotypes.length - 1}___`;
         });
-        
+
         // Remove HTML tags (now that stereotypes are protected)
         decodedLabel = decodedLabel.replace(/<[^>]*>/g, '');
-        
+
         // Restore stereotypes
         stereotypes.forEach((stereotype, index) => {
           decodedLabel = decodedLabel.replace(`___STEREOTYPE_${index}___`, stereotype);
         });
-        
+
         shape.Label = decodedLabel.trim();
       }
 
