@@ -36,13 +36,22 @@ export const mapArrowTypeToNumber = (arrowType: string | null | undefined): numb
     case 'open':
     case 'block':
       return 2; // Outline/filled arrow
+    case 'blockthin':
+      return 3; // Thin block arrow (inheritance)
+    case 'openthin':
+      return 4; // Thin open arrow (interface implementation)
+    case 'dash':
+    case 'dashedopen':
+      return 5; // Dashed arrow (dependency)
     case 'circle':
     case 'oval':
       return 6; // Circle arrow
     case 'circle_outline':
+    case 'circlePlus':
       return 7; // Circle outline arrow
     case 'diamond':
-      return 8; // Diamond arrow
+    case 'diamondthin':
+      return 8; // Diamond arrow (aggregation/composition)
     case 'diamond_outline':
       return 9; // Diamond outline arrow
     case 'cross':

@@ -55,16 +55,39 @@ export const getShapes = (jsonObj: any): Shape[] => {
     // First pass: collect all cells and identify vertices and edges
     const cellMap = new Map<string, DrawIOCell>();
     const edgeLabels = new Map<string, string>(); // Map edge ID to label
+    const swimlanes = new Map<string, DrawIOCell>(); // Map swimlane ID to cell
+    const swimlaneChildren = new Map<string, DrawIOCell[]>(); // Map parent ID to children
 
     for (const cell of cells) {
       const cellData = cell['$'] as DrawIOCell;
       cellMap.set(cellData.id, cellData);
 
+      // Identify swimlanes (class containers)
+      if (cellData.style && cellData.style.includes('swimlane')) {
+        swimlanes.set(cellData.id, cellData);
+        swimlaneChildren.set(cellData.id, []);
+      }
+
       // Check if this is an edge label
       if (cellData.connectable === '0' && cellData.vertex === '1' && cellData.parent !== '1') {
         const parentId = cellData.parent;
         if (parentId && cellData.value) {
-          edgeLabels.set(parentId, cellData.value);
+          // Check if parent is a swimlane - if so, this is a child cell
+          if (swimlanes.has(parentId)) {
+            swimlaneChildren.get(parentId)?.push(cellData);
+          } else {
+            edgeLabels.set(parentId, cellData.value);
+          }
+        }
+      }
+
+      // Collect children of swimlanes (attributes/methods in class diagrams)
+      if (cellData.parent && cellData.parent !== '0' && cellData.parent !== '1') {
+        if (swimlanes.has(cellData.parent) && cellData.vertex === '1' && cellData.value) {
+          const children = swimlaneChildren.get(cellData.parent);
+          if (children && !children.includes(cellData)) {
+            children.push(cellData);
+          }
         }
       }
     }
@@ -77,14 +100,35 @@ export const getShapes = (jsonObj: any): Shape[] => {
       }
 
       // Skip edge labels (they have connectable="0" and are attached to edges)
-      if (cellData.connectable === '0' && cellData.vertex === '1' && cellData.parent !== '1') {
+      if (cellData.connectable === '0' && cellData.vertex === '1' && cellData.parent !== '1' && !swimlanes.has(cellData.parent || '')) {
         continue;
+      }
+
+      // Skip children of swimlanes (they'll be processed as part of the swimlane)
+      if (cellData.parent && swimlanes.has(cellData.parent) && cellData.vertex === '1') {
+        continue;
+      }
+
+      // For swimlanes, aggregate child content
+      let label = cellData.value || '';
+      if (swimlanes.has(id)) {
+        const children = swimlaneChildren.get(id) || [];
+        if (children.length > 0) {
+          // Build class content with attributes and methods
+          const childLabels = children
+            .filter(child => child.value && child.value.trim().length > 0)
+            .map(child => child.value)
+            .join('\n');
+          if (childLabels) {
+            label = `${label}\n---\n${childLabels}`;
+          }
+        }
       }
 
       const shape: Shape = {
         Id: id,
         ShapeType: getMermaidShapeByValue('rectangle'), // default
-        Label: cellData.value || '',
+        Label: label,
         Style: createDefaultStyle(),
         IsEdge: cellData.edge === '1',
         FromNode: cellData.source || '',
@@ -103,11 +147,29 @@ export const getShapes = (jsonObj: any): Shape[] => {
 
       // Clean up HTML entities in labels
       if (shape.Label) {
-        shape.Label = shape.Label.replace(/&lt;/g, '<')
+        // First decode HTML entities
+        let decodedLabel = shape.Label.replace(/&lt;/g, '<')
           .replace(/&gt;/g, '>')
           .replace(/&amp;/g, '&')
-          .replace(/<[^>]*>/g, '') // Remove HTML tags
-          .trim();
+          .replace(/&#xa;/g, '\n') // Decode newline
+          .replace(/&#xA;/g, '\n');
+        
+        // Extract and temporarily store stereotypes
+        const stereotypes: string[] = [];
+        decodedLabel = decodedLabel.replace(/<<([^>]+)>>/g, (match) => {
+          stereotypes.push(match);
+          return `___STEREOTYPE_${stereotypes.length - 1}___`;
+        });
+        
+        // Remove HTML tags (now that stereotypes are protected)
+        decodedLabel = decodedLabel.replace(/<[^>]*>/g, '');
+        
+        // Restore stereotypes
+        stereotypes.forEach((stereotype, index) => {
+          decodedLabel = decodedLabel.replace(`___STEREOTYPE_${index}___`, stereotype);
+        });
+        
+        shape.Label = decodedLabel.trim();
       }
 
       shapes.push(shape);

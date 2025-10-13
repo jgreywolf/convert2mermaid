@@ -160,11 +160,19 @@ const generateClassDiagram = (diagram: Diagram) => {
   const classes: Shape[] = [];
   const relationships: Shape[] = [];
 
-  // Separate classes from relationships
+  // Helper function to check if a shape is just a cardinality label
+  const isCardinalityLabel = (shape: Shape): boolean => {
+    const label = shape.Label?.trim() || '';
+    // Check if it's a simple cardinality notation
+    return /^(\d+|\*|0\.\.1|1\.\.\*|0\.\.\*|\d+\.\.\d+|[mn])$/.test(label) || 
+           (label === '' && shape.Id.match(/^[_\-]?\d+$/) !== null);
+  };
+
+  // Separate classes from relationships and filter out cardinality labels
   for (const shape of diagram.Shapes) {
     if (shape.IsEdge) {
       relationships.push(shape);
-    } else {
+    } else if (!isCardinalityLabel(shape)) {
       classes.push(shape);
     }
   }
@@ -172,25 +180,52 @@ const generateClassDiagram = (diagram: Diagram) => {
   // Generate class definitions
   for (const classShape of classes) {
     const className = extractClassName(classShape.Label) || sanitizeClassName(classShape.Id);
-    mermaidSyntax += `  class ${className} {\r\n`;
+    
+    // Skip if the class name is empty, just a number/symbol, or looks like a diagram root ID
+    if (!className || 
+        /^[_\-\d]+$/.test(className) || 
+        className.match(/^[A-Za-z0-9_-]{20,}[0-9]$/)) { // Skip long alphanumeric IDs ending in digit (likely root cells)
+      continue;
+    }
 
     // Parse class content (attributes and methods)
     const classContent = parseClassContent(classShape.Label);
+    
+    // Skip completely empty classes (no label and no content)
+    if (!classShape.Label && classContent.length === 0) {
+      continue;
+    }
+
+    // Extract stereotype if present
+    const stereotype = extractStereotype(classShape.Label);
+
+    mermaidSyntax += `  class ${className}`;
+    if (stereotype) {
+      mermaidSyntax += `\r\n  <<${stereotype}>> ${className}`;
+    }
+    mermaidSyntax += ` {\r\n`;
     for (const member of classContent) {
       mermaidSyntax += `    ${member}\r\n`;
     }
-
     mermaidSyntax += `  }\r\n`;
   }
 
   // Generate relationships
   for (const rel of relationships) {
-    const fromClass =
+    let fromClass =
       extractClassName(getShapeLabel(diagram.Shapes, rel.FromNode)) || sanitizeClassName(rel.FromNode || '');
-    const toClass = extractClassName(getShapeLabel(diagram.Shapes, rel.ToNode)) || sanitizeClassName(rel.ToNode || '');
+    let toClass = extractClassName(getShapeLabel(diagram.Shapes, rel.ToNode)) || sanitizeClassName(rel.ToNode || '');
 
     if (fromClass && toClass) {
-      const relType = determineClassRelationshipType(rel);
+      const relInfo = determineClassRelationshipType(rel);
+      const relType = relInfo.type;
+      const shouldReverse = relInfo.reverse;
+      
+      // Reverse direction if needed (e.g., for inheritance arrows pointing backwards)
+      if (shouldReverse) {
+        [fromClass, toClass] = [toClass, fromClass];
+      }
+      
       const label = rel.Label ? ` : ${sanitizeLabel(rel.Label)}` : '';
       mermaidSyntax += `  ${fromClass} ${relType} ${toClass}${label}\r\n`;
     }
@@ -329,6 +364,21 @@ const sanitizeClassName = (name: string): string => {
   return name.replace(/[^a-zA-Z0-9_]/g, '').replace(/^[0-9]/, '_$&');
 };
 
+const extractStereotype = (label: string): string => {
+  if (!label) return '';
+
+  // Decode HTML entities FIRST, before removing tags
+  let content = label.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+  
+  // Look for <<stereotype>> notation BEFORE removing HTML tags
+  const stereotypeMatch = content.match(/<<([^>]+)>>/);
+  if (stereotypeMatch) {
+    return stereotypeMatch[1].trim();
+  }
+
+  return '';
+};
+
 const extractClassName = (label: string): string => {
   if (!label) return '';
 
@@ -338,11 +388,44 @@ const extractClassName = (label: string): string => {
     return sanitizeClassName(boldMatch[1]);
   }
 
-  // Fallback: decode HTML entities and get first word
+  // Decode HTML entities
   let content = label.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
   content = content.replace(/<[^>]*>/g, ''); // Remove all HTML tags
 
-  // Get the first meaningful word
+  // Check for plain text format with --- separator
+  if (content.includes('---')) {
+    const parts = content.split('---');
+    if (parts.length > 0) {
+      const className = parts[0].trim();
+      if (className) {
+        return sanitizeClassName(className);
+      }
+    }
+  }
+
+  // Check for <<stereotype>> notation
+  if (content.includes('<<') && content.includes('>>')) {
+    // Extract content after stereotype
+    const afterStereotype = content.split('>>')[1];
+    if (afterStereotype) {
+      const words = afterStereotype.trim().split(/[\r\n]+/);
+      if (words.length > 0) {
+        return sanitizeClassName(words[0].trim());
+      }
+    }
+  }
+
+  // Get the first line/word as class name
+  const lines = content.split(/[\r\n]+/).filter((line) => line.trim().length > 0);
+  if (lines.length > 0) {
+    const firstLine = lines[0].trim();
+    // Skip if it starts with visibility modifier (it's an attribute/method)
+    if (!firstLine.match(/^[+\-#~]\s/)) {
+      return sanitizeClassName(firstLine);
+    }
+  }
+
+  // Fallback: get first meaningful word
   const words = content.split(/\s+/).filter((word) => word.length > 0);
   if (words.length > 0) {
     return sanitizeClassName(words[0]);
@@ -362,56 +445,92 @@ const parseClassContent = (label: string): string[] => {
     .replace(/&quot;/g, '"')
     .replace(/&nbsp;/g, ' ');
 
-  // Split by <hr> tags to separate sections (title, attributes, methods)
-  const sections = content.split(/<hr[^>]*>/);
   const members: string[] = [];
+  let lines: string[] = [];
 
-  // Process each section after the first (skip title section)
-  for (let i = 1; i < sections.length; i++) {
-    const section = sections[i];
-
-    // Remove paragraph tags but keep content
-    let cleanSection = section.replace(/<\/p>/g, '').replace(/<p[^>]*>/g, '');
-
-    // Split by <br> tags to get individual lines
-    const lines = cleanSection
-      .split(/<br[^>]*>/g)
+  // Check if content has HTML formatting or plain text formatting
+  if (content.includes('<hr')) {
+    // HTML format: Split by <hr> tags to separate sections
+    const sections = content.split(/<hr[^>]*>/);
+    
+    // Process each section after the first (skip title section)
+    for (let i = 1; i < sections.length; i++) {
+      const section = sections[i];
+      // Remove paragraph tags but keep content
+      let cleanSection = section.replace(/<\/p>/g, '').replace(/<p[^>]*>/g, '');
+      // Split by <br> tags to get individual lines
+      const sectionLines = cleanSection
+        .split(/<br[^>]*>/g)
+        .map((line) => line.replace(/<[^>]*>/g, '').trim())
+        .filter((line) => line.length > 0);
+      lines.push(...sectionLines);
+    }
+  } else if (content.includes('---')) {
+    // Plain text format with --- separator
+    const parts = content.split('---');
+    if (parts.length > 1) {
+      // Skip the first part (class name) and process the rest
+      for (let i = 1; i < parts.length; i++) {
+        const sectionLines = parts[i]
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0);
+        lines.push(...sectionLines);
+      }
+    }
+  } else {
+    // Fallback: split by newlines
+    lines = content
+      .split(/\r?\n/)
       .map((line) => line.trim())
-      .filter((line) => line.length > 0);
+      .filter((line) => line.length > 0)
+      .slice(1); // Skip first line (class name)
+  }
 
-    for (const line of lines) {
-      // Clean up any remaining HTML
-      const cleanLine = line.replace(/<[^>]*>/g, '').trim();
+  // Process each line
+  for (const line of lines) {
+    const cleanLine = line.trim();
+    
+    if (!cleanLine) continue;
 
-      if (cleanLine.includes('(') && cleanLine.includes(')')) {
-        // Method
-        const visibility = cleanLine.startsWith('+')
-          ? '+'
-          : cleanLine.startsWith('-')
-          ? '-'
-          : cleanLine.startsWith('#')
-          ? '#'
-          : '+';
-        const method = cleanLine.replace(/^[+\-#]\s*/, '').trim();
-        if (method) {
-          members.push(`${visibility}${method}`);
-        }
-      } else if (
-        cleanLine.includes(':') &&
-        (cleanLine.startsWith('+') || cleanLine.startsWith('-') || cleanLine.startsWith('#'))
-      ) {
-        // Attribute with type
-        const visibility = cleanLine.startsWith('+')
-          ? '+'
-          : cleanLine.startsWith('-')
-          ? '-'
-          : cleanLine.startsWith('#')
-          ? '#'
-          : '-';
-        const attribute = cleanLine.replace(/^[+\-#]\s*/, '').trim();
-        if (attribute) {
-          members.push(`${visibility}${attribute}`);
-        }
+    // Skip horizontal lines and empty content
+    if (cleanLine === '---' || cleanLine.match(/^-+$/)) continue;
+
+    if (cleanLine.includes('(') && cleanLine.includes(')')) {
+      // Method - parse and clean up
+      const visibility = cleanLine.startsWith('+')
+        ? '+'
+        : cleanLine.startsWith('-')
+        ? '-'
+        : cleanLine.startsWith('#')
+        ? '#'
+        : cleanLine.startsWith('~')
+        ? '~'
+        : '+';
+      
+      let method = cleanLine.replace(/^[+\-#~]\s*/, '').trim();
+      
+      // Clean up double colons (::) that might appear in the format
+      method = method.replace(/\s*:\s*:\s*/g, ': ');
+      
+      if (method) {
+        members.push(`${visibility}${method}`);
+      }
+    } else if (cleanLine.startsWith('+') || cleanLine.startsWith('-') || cleanLine.startsWith('#') || cleanLine.startsWith('~')) {
+      // Attribute with visibility modifier
+      const visibility = cleanLine.startsWith('+')
+        ? '+'
+        : cleanLine.startsWith('-')
+        ? '-'
+        : cleanLine.startsWith('#')
+        ? '#'
+        : cleanLine.startsWith('~')
+        ? '~'
+        : '-';
+      
+      const attribute = cleanLine.replace(/^[+\-#~]\s*/, '').trim();
+      if (attribute) {
+        members.push(`${visibility}${attribute}`);
       }
     }
   }
@@ -449,21 +568,76 @@ const parseEntityAttributes = (label: string): string[] => {
   return attributes.length > 0 ? attributes : ['string name'];
 };
 
-const determineClassRelationshipType = (rel: Shape): string => {
-  // Check label for multiplicity or relationship type
-  const label = rel.Label?.toLowerCase() || '';
+const determineClassRelationshipType = (rel: Shape): { type: string; reverse: boolean } => {
+  // First check arrow styles for UML relationships
+  const startArrow = rel.Style.BeginArrow;
+  const endArrow = rel.Style.EndArrow;
+  const startFill = rel.Style.BeginArrowSize; // In DrawIO, this indicates filled (1) or hollow (0)
+  const endFill = rel.Style.EndArrowSize;
+  const linePattern = rel.Style.LinePattern;
 
-  if (label.includes('inherit') || label.includes('extends')) {
-    return '--|>';
-  } else if (label.includes('implement')) {
-    return '..|>';
-  } else if (label.includes('composition')) {
-    return '*--';
-  } else if (label.includes('aggregation')) {
-    return 'o--';
-  } else {
-    return '-->';
+  // Check for interface implementation FIRST (hollow triangle with dashed line)
+  // DrawIO: openthin arrow (4) or dashed line with block arrow
+  // This must come before inheritance check since both use block arrows
+  if (linePattern === 2) {
+    if (endArrow === 4 || (endArrow === 2 && endFill === 0)) {
+      return { type: '..|>', reverse: false }; // Implementation
+    }
+    if (startArrow === 4 || (startArrow === 2 && startFill === 0)) {
+      return { type: '..|>', reverse: true }; // Implementation (reversed)
+    }
   }
+
+  // Check for inheritance (filled/hollow triangle arrow on solid line)
+  // DrawIO: blockthin arrow (3) or block arrow (2) with hollow fill
+  // If arrow is at start (BeginArrow), we need to reverse direction
+  if (endArrow === 3 || (endArrow === 2 && endFill === 0 && linePattern !== 2)) {
+    return { type: '--|>', reverse: false }; // Inheritance
+  }
+  if (startArrow === 3 || (startArrow === 2 && startFill === 0 && linePattern !== 2)) {
+    return { type: '--|>', reverse: true }; // Inheritance (reversed)
+  }
+
+  // Check for composition (filled diamond)
+  // DrawIO: diamond arrow (8) with fill (startFill=1)
+  if (startArrow === 8 && startFill === 1) {
+    return { type: '*--', reverse: false }; // Composition
+  }
+  if (endArrow === 8 && endFill === 1) {
+    return { type: '--*', reverse: false }; // Composition (diamond at end)
+  }
+
+  // Check for aggregation (hollow diamond)
+  // DrawIO: diamond arrow (8) without fill (startFill=0 or undefined)
+  if (startArrow === 8 && startFill === 0) {
+    return { type: 'o--', reverse: false }; // Aggregation
+  }
+  if (endArrow === 8 && endFill === 0) {
+    return { type: '--o', reverse: false }; // Aggregation (diamond at end)
+  }
+
+  // Check for dependency (dashed line with arrow)
+  if (linePattern === 2) {
+    return { type: '..>', reverse: false }; // Dependency
+  }
+
+  // Fallback: check label for relationship type keywords
+  const label = rel.Label?.toLowerCase() || '';
+  
+  if (label.includes('inherit') || label.includes('extends')) {
+    return { type: '--|>', reverse: false };
+  } else if (label.includes('implement') || label.includes('interface')) {
+    return { type: '..|>', reverse: false };
+  } else if (label.includes('composition')) {
+    return { type: '*--', reverse: false };
+  } else if (label.includes('aggregation')) {
+    return { type: 'o--', reverse: false };
+  } else if (label.includes('dependency') || label.includes('depends')) {
+    return { type: '..>', reverse: false };
+  }
+
+  // Default association
+  return { type: '-->', reverse: false }; // Association
 };
 
 const parseCardinality = (label: string): string => {
