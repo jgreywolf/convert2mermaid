@@ -1,0 +1,36 @@
+@startuml
+!theme plain
+title Sample PlantUML Use Case Diagram
+
+left to right direction
+
+actor "Customer" as customer
+actor "Admin" as admin
+actor "System" as system
+
+rectangle "E-Commerce Platform" {
+  usecase "Browse Products" as UC1
+  usecase "Add to Cart" as UC2
+  usecase "Checkout" as UC3
+  usecase "Make Payment" as UC4
+  usecase "Track Order" as UC5
+  usecase "Manage Inventory" as UC6
+  usecase "Generate Reports" as UC7
+  usecase "Process Refund" as UC8
+}
+
+customer --> UC1
+customer --> UC2
+customer --> UC3
+customer --> UC4
+customer --> UC5
+
+admin --> UC6
+admin --> UC7
+admin --> UC8
+
+UC3 ..> UC4 : <<include>>
+UC4 ..> system : <<extend>>
+UC5 ..> system : <<extend>>
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+!theme plain
+title Sample PlantUML Class Diagram
+
+class User {
+  +id: String
+  +name: String
+  +email: String
+  --
+  +login()
+  +logout()
+  +updateProfile()
+}
+
+class Admin {
+  +permissions: List
+  --
+  +addUser()
+  +deleteUser()
+  +manageSystems()
+}
+
+class Customer {
+  +orders: List
+  +address: String
+  --
+  +placeOrder()
+  +viewOrders()
+}
+
+interface Authenticatable {
+  +authenticate()
+  +getToken()
+}
+
+abstract class BaseEntity {
+  #createdAt: DateTime
+  #updatedAt: DateTime
+  --
+  #save()
+  #delete()
+}
+
+User --|> BaseEntity : extends
+Admin --|> User : extends
+Customer --|> User : extends
+User ..|> Authenticatable : implements
+User "1" -- "*" Customer : manages
+
+@enduml
