@@ -146,8 +146,10 @@ export const parseClassContent = (label: string): string[] => {
 
       let method = cleanLine.replace(/^[+\-#~]\s*/, '').trim();
 
-      // Clean up double colons (::) that might appear in the format
+      // Clean up double colons (::) that might appear in PlantUML format
       method = method.replace(/\s*:\s*:\s*/g, ': ');
+      // Remove colon before return type (draw.io format): method(): Type → method() Type
+      method = method.replace(/\)\s*:\s+/, ') ');
 
       if (method) {
         members.push(`${visibility}${method}`);

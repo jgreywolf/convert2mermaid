@@ -159,6 +159,12 @@ export const getShapes = (jsonObj: any): Shape[] => {
           .replace(/&#xa;/g, '\n') // Decode newline
           .replace(/&#xA;/g, '\n');
 
+        // Preserve structural HTML before stripping tags:
+        // Convert <br> variants to newlines (attribute/method line separators)
+        decodedLabel = decodedLabel.replace(/<br[^>]*>/gi, '\n');
+        // Convert <hr> variants to --- section separators (class name / attributes / methods)
+        decodedLabel = decodedLabel.replace(/<hr[^>]*>/gi, '\n---\n');
+
         // Extract and temporarily store stereotypes
         const stereotypes: string[] = [];
         decodedLabel = decodedLabel.replace(/<<([^>]+)>>/g, (match) => {

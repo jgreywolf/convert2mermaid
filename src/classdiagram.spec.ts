@@ -236,8 +236,8 @@ describe('Class Diagram Features', () => {
       expect(mermaidCode).toMatch(/\+datetime \w+/);
       expect(mermaidCode).toMatch(/\+bool \w+/);
 
-      // Methods should have parentheses and return types
-      expect(mermaidCode).toMatch(/\+\w+\([^)]*\):\s*\w+/);
+      // Methods should have parentheses and return types (without colon separator)
+      expect(mermaidCode).toMatch(/\+\w+\([^)]*\)\s+\w+/);
     });
   });
 
