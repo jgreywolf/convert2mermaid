@@ -200,6 +200,18 @@ describe('Class Diagram Features', () => {
         expect(stereotypeMatches.length).toBeGreaterThan(5);
       }
     });
+
+    it('should render stereotypes as standalone Mermaid statements', async () => {
+      const diagram = await parseData('tests/classDiagram_kanban_board.drawio');
+      expect(diagram).toBeDefined();
+
+      if (!diagram) return;
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toMatch(/class Attachment \{[\s\S]*?\}\r?\n\s+<<abstract>> Attachment/);
+      expect(mermaidCode).not.toMatch(/<<(interface|abstract|enumeration)>>\s+\w+\s*\{/);
+    });
   });
 
   describe('Swimlane Aggregation', () => {

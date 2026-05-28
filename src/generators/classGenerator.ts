@@ -45,15 +45,14 @@ export const generateClassDiagram = (diagram: Diagram): string => {
     // Extract stereotype if present
     const stereotype = extractStereotype(classShape.Label);
 
-    mermaidSyntax += `  class ${className}`;
-    if (stereotype) {
-      mermaidSyntax += `\r\n  <<${stereotype}>> ${className}`;
-    }
-    mermaidSyntax += ` {\r\n`;
+    mermaidSyntax += `  class ${className} {\r\n`;
     for (const member of classContent) {
       mermaidSyntax += `    ${member}\r\n`;
     }
     mermaidSyntax += `  }\r\n`;
+    if (stereotype) {
+      mermaidSyntax += `  <<${stereotype}>> ${className}\r\n`;
+    }
   }
 
   // Generate relationships
