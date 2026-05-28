@@ -15,14 +15,28 @@ program
   .name('convert2mermaid')
   .version('1.0.0')
   .description('A utility to convert diagrams in other formats to MermaidJs markdown syntax')
-  .requiredOption('-i, --inputFile <value>', 'Input file')
+  .option('-i, --inputFile [value]', 'Input file')
   .option('-d, --diagramType [value]', 'Type of diagram', 'flowchart')
   .option('-o, --outputFile [value]', 'Output file name - defaults to input filename')
-  .option('-f, --outputFormat [value]', 'Output format', 'mmd')
+  .option('-f, --outputFormat [value]', "Output format: 'mmd' or 'md'", 'mmd')
+  .addHelpText('after', `
+Examples:
+  # Run directly from TypeScript source (no build needed)
+  npm start -- -i input.drawio -f md
 
+  # Basic conversion (requires build first)
+  node dist/index.js -i input.drawio -o output.mmd
+
+  # Specify output format
+  node dist/index.js -i diagram.vsdx -o result.md -f md`)
   .parse(process.argv);
 
 const options = program.opts();
+
+if (!options.inputFile) {
+  program.help();
+}
+
 const fileExt = path.extname(options.inputFile);
 if (!supportedFileTypes.includes(fileExt)) {
   console.error(`Unsupported file type: ${fileExt}. Supported file types are: ${supportedFileTypes}`);
@@ -33,7 +47,8 @@ processFile(options.inputFile);
 
 async function processFile(filepath: string) {
   const spinner = ora(`Processing ${filepath}`).start();
-  let outputFilePath = options.outputFile || filepath.replace(fileExt, '.mmd');
+  const defaultExt = options.outputFormat === 'md' ? '.md' : '.mmd';
+  let outputFilePath = options.outputFile || filepath.replace(fileExt, defaultExt);
 
   let diagram = await parseData(filepath);
 
@@ -65,8 +80,11 @@ async function processFile(filepath: string) {
 
   try {
     const mermaidSyntax = generateMermaidCode(diagram);
+    const finalOutput = options.outputFormat === 'md'
+      ? '```mermaid\n' + mermaidSyntax + '\n```\n'
+      : mermaidSyntax;
 
-    fs.writeFileSync(outputFilePath, mermaidSyntax);
+    fs.writeFileSync(outputFilePath, finalOutput);
     spinner.succeed();
     console.log(`Mermaid syntax written to ${outputFilePath}`);
   } catch (error) {
