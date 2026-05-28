@@ -3,6 +3,11 @@
 [![npm version](https://img.shields.io/npm/v/convert2mermaid.svg)](https://www.npmjs.com/package/convert2mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<p align="center">
+  <a href="README.md">English</a> |
+  <a href="README.zh.md">简体中文</a>
+</p>
+
 A powerful command-line tool that converts diagrams from multiple formats (Visio, DrawIO, Excalidraw, PlantUML) into [Mermaid](https://mermaid.js.org/) syntax. Perfect for maintaining documentation in version control, generating diagrams for markdown files, and converting legacy diagrams to modern formats.
 
 ## 🚀 Features
@@ -31,6 +36,9 @@ npm run build
 ## 🎯 Quick Start
 
 ```bash
+# Run directly from TypeScript source (no build needed)
+npm start -- -i tests/classDiagram_kanban_board.drawio -f md
+
 # Basic conversion
 node ./dist/index.js -i input-diagram.drawio -o output.mmd
 
