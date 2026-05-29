@@ -1,6 +1,6 @@
 {
   "name": "convert2mermaid",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Convert diagrams from other formats into mermaidJs syntax",
   "license": "MIT",
   "type": "module",
