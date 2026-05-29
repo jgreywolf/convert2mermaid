@@ -15,8 +15,9 @@ describe('Flowchart diagram generation', () => {
 
     expect(mermaidCode).toMatch(/^flowchart TD/);
     expect(mermaidCode).toContain('n0F7vi46eRVVwoKnTOABEj_1@{ shape: rect, label: Rect1 }');
-    expect(mermaidCode).toContain('n0F7vi46eRVVwoKnTOABEj_1 -- "connect1" -- n0F7vi46eRVVwoKnTOABEj_2');
+    expect(mermaidCode).toContain('n0F7vi46eRVVwoKnTOABEj_1 ---|connect1| n0F7vi46eRVVwoKnTOABEj_2');
     expect(mermaidCode).not.toContain('F7vi46eRVVwoKnTOABEj-1');
     expect(mermaidCode).not.toContain('--"connect1"--');
+    expect(mermaidCode).not.toContain('-- "connect1" --');
   });
 });

@@ -209,8 +209,8 @@ export const buildEdgeStatement = (
   let endArrow = getArrow(style.EndArrow);
 
   // Sanitize the edge label text with special handling for edge labels
-  const sanitizedLabel = sanitizeEdgeLabelFn(text);
-  const sanitizedText = sanitizedLabel ? ` ${sanitizedLabel} ` : '';
+  const sanitizedLabel = sanitizeEdgeLabelFn(text).replace(/^"|"$/g, '');
+  const sanitizedText = sanitizedLabel ? `|${sanitizedLabel}|` : '';
 
   switch (startArrow) {
     case '>':
@@ -231,10 +231,19 @@ export const buildEdgeStatement = (
   }
 
   if (startArrow === '<' && endArrow === '') {
-    return `${end} ${endStroke}${sanitizedText}${startStroke}> ${start}`;
+    const labeledStroke = sanitizedText ? `${endStroke}-${sanitizedText}` : endStroke;
+    return `${end} ${labeledStroke}${startStroke}> ${start}`;
   }
 
-  return `${start} ${startArrow}${startStroke}${sanitizedText}${endStroke}${endArrow} ${end}`;
+  if (sanitizedText) {
+    if (endArrow) {
+      return `${start} ${startArrow}${startStroke}${sanitizedText}${endStroke}${endArrow} ${end}`;
+    }
+
+    return `${start} ${startStroke}-${sanitizedText} ${end}`;
+  }
+
+  return `${start} ${startArrow}${startStroke}${endStroke}${endArrow} ${end}`;
 };
 
 /**
