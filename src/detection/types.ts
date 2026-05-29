@@ -25,6 +25,7 @@ export interface DiagramAnalysis {
 
 export interface DetectionOptions {
   fallbackFlowchartConfidence?: number;
+  silent?: boolean;
 }
 
 export interface DetectionPattern {

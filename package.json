@@ -5,17 +5,25 @@
   "license": "MIT",
   "type": "module",
   "author": "Justin Greywolf <jgreywolf@lostware.com>",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "npx tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "start": "npx tsx src/index.ts",
+    "start": "npx tsx src/cli.ts",
     "analyze": "node scripts/analyze-diagram.js"
   },
   "bin": {
-    "convert2mermaid": "./dist/index.js"
+    "convert2mermaid": "./dist/cli.js"
   },
   "dependencies": {
     "commander": "^12.1.0",
