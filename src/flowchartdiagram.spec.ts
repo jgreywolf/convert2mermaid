@@ -42,8 +42,32 @@ describe('Flowchart diagram generation', () => {
     expect(mermaidCode).not.toContain('-- "x arrow head" -->');
     expect(mermaidCode).not.toContain('-- "both direction arrows" -->');
     expect(mermaidCode).not.toContain('---|Red thick edge|');
-    expect(mermaidCode).toContain('style n02Qw8IFYnQMUSFGZe73MK_1 stroke: #008040,fill: #f8cecc');
+    expect(mermaidCode).toContain('style n02Qw8IFYnQMUSFGZe73MK_1 stroke: #008040,color: #000000,fill: #f8cecc');
     expect(mermaidCode).not.toContain('light-dark(');
+  });
+
+  it('preserves visible text colors for filled DrawIO nodes', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="explicit" value="Explicit" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#CCCCCC;fontColor=#FFFFFF;" vertex="1" parent="1"/><mxCell id="default" value="Default" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;" vertex="1" parent="1"/></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-text-color-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse text color fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('style n0explicit color: #FFFFFF,fill: #CCCCCC');
+      expect(mermaidCode).toContain('style n0default color: #000000,fill: #dae8fc');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
   });
 
   it('resolves DrawIO point-only edge endpoints and emits valid open links', async () => {

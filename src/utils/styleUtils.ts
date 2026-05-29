@@ -120,6 +120,7 @@ export const getStyleStatement = (style: Style): string => {
   const fillForeground = sanitizeMermaidStyleValue(style.FillForeground);
   const fillBackground = sanitizeMermaidStyleValue(style.FillBackground);
   const lineColor = sanitizeMermaidStyleValue(style.LineColor);
+  const textColor = sanitizeMermaidStyleValue(style.TextColor) || (fillForeground ? '#000000' : '');
 
   // Handle fill properties
   if (fillForeground && fillBackground && style.FillPattern !== undefined) {
@@ -152,6 +153,10 @@ export const getStyleStatement = (style: Style): string => {
 
   if (lineColor) {
     styleStatement += `stroke: ${lineColor},`;
+  }
+
+  if (textColor) {
+    styleStatement += `color: ${textColor},`;
   }
 
   if (style.LinePattern) {
