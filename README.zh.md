@@ -417,16 +417,16 @@ src/
 │   ├── types.ts             检测结果和选项类型
 │   └── index.ts             检测模块导出
 ├── generators/              Mermaid 语法生成器
-│   ├── flowchartGenerator.ts
-│   ├── classGenerator.ts
-│   ├── sequenceGenerator.ts
-│   ├── stateGenerator.ts
-│   ├── componentGenerator.ts
-│   ├── erGenerator.ts
-│   ├── ganttGenerator.ts
-│   ├── mindmapGenerator.ts
-│   ├── networkGenerator.ts
-│   └── timelineGenerator.ts
+│   ├── flowchartGenerator.ts  生成通用节点/连线图的 Mermaid flowchart 语法
+│   ├── classGenerator.ts      生成 UML 类和关系对应的 classDiagram 语法
+│   ├── sequenceGenerator.ts   生成参与者和消息对应的 sequenceDiagram 语法
+│   ├── stateGenerator.ts      生成状态和转换对应的 stateDiagram-v2 语法
+│   ├── componentGenerator.ts  生成组件、模块图对应的 block-beta 语法
+│   ├── erGenerator.ts         生成实体和关系对应的 erDiagram 语法
+│   ├── ganttGenerator.ts      生成简单计划任务对应的 Mermaid gantt 语法
+│   ├── mindmapGenerator.ts    生成层级结构对应的 mindmap 语法
+│   ├── networkGenerator.ts    为网络图生成 flowchart 风格输出
+│   └── timelineGenerator.ts   生成有序事件对应的 timeline 语法
 ├── shapes/                  形状映射和 Mermaid 形状辅助逻辑
 │   ├── flowchartShapes.ts
 │   └── shapeMappers.ts

@@ -417,16 +417,16 @@ src/
 │   ├── types.ts             Detection result and option types
 │   └── index.ts             Detection exports
 ├── generators/              Mermaid syntax generators
-│   ├── flowchartGenerator.ts
-│   ├── classGenerator.ts
-│   ├── sequenceGenerator.ts
-│   ├── stateGenerator.ts
-│   ├── componentGenerator.ts
-│   ├── erGenerator.ts
-│   ├── ganttGenerator.ts
-│   ├── mindmapGenerator.ts
-│   ├── networkGenerator.ts
-│   └── timelineGenerator.ts
+│   ├── flowchartGenerator.ts  Generates Mermaid flowchart syntax for generic node/edge diagrams
+│   ├── classGenerator.ts      Generates classDiagram syntax for UML-style classes and relationships
+│   ├── sequenceGenerator.ts   Generates sequenceDiagram syntax for participants and messages
+│   ├── stateGenerator.ts      Generates stateDiagram-v2 syntax for states and transitions
+│   ├── componentGenerator.ts  Generates block-beta syntax for component/module diagrams
+│   ├── erGenerator.ts         Generates erDiagram syntax for entities and relationships
+│   ├── ganttGenerator.ts      Generates Mermaid gantt syntax for simple schedules
+│   ├── mindmapGenerator.ts    Generates mindmap syntax for hierarchical diagrams
+│   ├── networkGenerator.ts    Generates flowchart-style output for network diagrams
+│   └── timelineGenerator.ts   Generates timeline syntax for ordered events
 ├── shapes/                  Shape mappings and Mermaid shape helpers
 │   ├── flowchartShapes.ts
 │   └── shapeMappers.ts
