@@ -138,6 +138,7 @@ export const getShapes = (jsonObj: any): Shape[] => {
         IsEdge: cellData.edge === '1',
         FromNode: cellData.source || '',
         ToNode: cellData.target || '',
+        ParentNode: cellData.parent || '',
       };
 
       // Parse style attributes

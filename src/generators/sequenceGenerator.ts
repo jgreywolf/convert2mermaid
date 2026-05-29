@@ -2,7 +2,7 @@ import { Diagram, Shape } from '../types.js';
 import { sanitizeLabel } from '../utils/labelUtils.js';
 
 export const generateSequenceDiagram = (diagram: Diagram): string => {
-  let mermaidSyntax = 'sequenceDiagram\r\n';
+  let mermaidSyntax = 'sequenceDiagram\n';
 
   const participants: Shape[] = [];
   const actors: Shape[] = [];
@@ -90,7 +90,7 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
 
   // Add autonumber if sequence numbers were detected
   if (hasSequenceNumbers) {
-    mermaidSyntax += '  autonumber\r\n\r\n';
+    mermaidSyntax += '  autonumber\n\n';
   }
 
   // Generate actor declarations first
@@ -99,7 +99,7 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     const alias = generateAlias(actorName, usedAliases);
     usedAliases.add(alias);
     aliasMap.set(actor.Id, alias);
-    mermaidSyntax += `  actor ${alias} as ${actorName}\r\n`;
+    mermaidSyntax += `  actor ${alias} as ${actorName}\n`;
   }
 
   // Generate participant declarations
@@ -108,7 +108,14 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     const alias = generateAlias(participantName, usedAliases);
     usedAliases.add(alias);
     aliasMap.set(participant.Id, alias);
-    mermaidSyntax += `  participant ${alias} as ${participantName}\r\n`;
+    mermaidSyntax += `  participant ${alias} as ${participantName}\n`;
+  }
+
+  for (const activation of diagram.Shapes.filter((shape) => shape.ParticipantType === 'activation')) {
+    const parentAlias = activation.ParentNode ? aliasMap.get(activation.ParentNode) : undefined;
+    if (parentAlias) {
+      aliasMap.set(activation.Id, parentAlias);
+    }
   }
 
   // Generate message flows
@@ -118,15 +125,44 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     const messageText = sanitizeLabel(message.Label) || '';
 
     // Map IDs to aliases
-    from = aliasMap.get(from) || from;
-    to = aliasMap.get(to) || to;
+    from = aliasMap.get(from) || ensureEndpointAlias(from, aliasMap, usedAliases);
+    to = aliasMap.get(to) || ensureEndpointAlias(to, aliasMap, usedAliases);
 
     if (from && to) {
       // Determine arrow type based on style
       const arrow = message.Style.LinePattern === 2 ? '-->' : '->';
-      mermaidSyntax += `  ${from}${arrow}${to}: ${messageText}\r\n`;
+      mermaidSyntax += `  ${from}${arrow}${to}: ${messageText}\n`;
     }
   }
 
   return mermaidSyntax;
+};
+
+const ensureEndpointAlias = (
+  id: string,
+  aliasMap: Map<string, string>,
+  usedAliases: Set<string>
+): string => {
+  if (!id) return '';
+
+  const existingAlias = aliasMap.get(id);
+  if (existingAlias) {
+    return existingAlias;
+  }
+
+  const base = sanitizeSequenceAlias(id);
+  let alias = base;
+  let counter = 1;
+  while (usedAliases.has(alias)) {
+    alias = `${base}${counter++}`;
+  }
+
+  usedAliases.add(alias);
+  aliasMap.set(id, alias);
+  return alias;
+};
+
+const sanitizeSequenceAlias = (id: string): string => {
+  const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
+  return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `P_${sanitized}`;
 };
