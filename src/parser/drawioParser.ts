@@ -4,6 +4,7 @@ import { parseStringPromise } from 'xml2js';
 import { Diagram, Shape, Style } from '../types.js';
 import { MermaidShape, getMermaidShapeByValue } from '../shapes/flowchartShapes.js';
 import { createDefaultStyle, mapArrowTypeToNumber } from '../utils/styleUtils.js';
+import { normalizeDrawIOXml } from '../utils/drawioUtils.js';
 
 export interface DrawIOCell {
   id: string;
@@ -21,7 +22,7 @@ export interface DrawIOCell {
 // Parse a DrawIO file and return a Diagram
 export const parseDiagram = async (filePath: string): Promise<Diagram> => {
   const buffer = fs.readFileSync(filePath);
-  const xmlContent = buffer.toString('utf-8');
+  const xmlContent = normalizeDrawIOXml(buffer.toString('utf-8'));
   const jsonObj = await parseStringPromise(xmlContent);
   const shapes = getShapes(jsonObj);
   return { Shapes: shapes };

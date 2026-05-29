@@ -1,5 +1,6 @@
 import { DiagramDetector } from './DiagramDetector.js';
 import { DiagramType, DiagramAnalysis, DetectionOptions, DetectionPattern } from './types.js';
+import { normalizeDrawIOXml } from '../utils/drawioUtils.js';
 
 const DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE = 50;
 
@@ -35,13 +36,13 @@ export class DrawIODetector extends DiagramDetector {
    */
   public async analyzeDrawIOFile(buffer: Buffer, options: DetectionOptions = {}): Promise<DiagramAnalysis> {
     try {
-      const xmlContent = buffer.toString('utf-8');
+      const xmlContent = normalizeDrawIOXml(buffer.toString('utf-8'));
       if (!xmlContent.includes('<mxfile') || !xmlContent.includes('<mxGraphModel')) {
         return this.createUnknownAnalysis();
       }
 
       // First, try to detect from raw XML structure
-      const xmlAnalysis = await this.analyzeXMLStructure(buffer);
+      const xmlAnalysis = await this.analyzeXMLStructure(xmlContent);
 
       return this.applyFlowchartFallback(xmlAnalysis, options);
     } catch (error) {
@@ -72,8 +73,7 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Analyzes the XML structure for diagram type patterns
    */
-  private async analyzeXMLStructure(buffer: Buffer): Promise<DiagramAnalysis> {
-    const xmlContent = buffer.toString('utf-8');
+  private async analyzeXMLStructure(xmlContent: string): Promise<DiagramAnalysis> {
     const context = this.createAnalysisContext(xmlContent);
 
     // Analyze structured mxCell fields instead of scanning arbitrary XML text.
