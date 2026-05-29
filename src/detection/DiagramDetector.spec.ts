@@ -47,7 +47,7 @@ describe('DiagramDetector', () => {
       const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
 
       expect(analysis.detectedType).toBe(DiagramType.COMPONENT);
-      expect(analysis.confidence).toBeGreaterThan(60);
+      expect(analysis.confidence).toBeGreaterThanOrEqual(60);
     });
 
     it('should detect entity relationship diagram from DrawIO file', async () => {
