@@ -19,8 +19,7 @@ program
   .option('-d, --diagramType [value]', 'Type of diagram', 'flowchart')
   .option('-o, --outputFile [value]', 'Output file name - defaults to input filename')
   .option('-f, --outputFormat [value]', "Output format: 'mmd' or 'md'", 'mmd')
-  .option('--fallbackFlowchartConfidence [value]', 'Fallback to flowchart when DrawIO detection confidence is below this percentage', '50')
-  .option('--fallback_flowchart_confidence [value]', 'Alias for --fallbackFlowchartConfidence')
+  .option('-ffc, --fallbackFlowchartConfidence [value]', 'Fallback to flowchart when DrawIO detection confidence is below this percentage', '50')
   .addHelpText('after', `
 Examples:
   # Run directly from TypeScript source (no build needed)
@@ -98,7 +97,7 @@ async function processFile(filepath: string) {
 }
 
 function parseFallbackFlowchartConfidence(): number {
-  const rawValue = options.fallback_flowchart_confidence || options.fallbackFlowchartConfidence;
+  const rawValue = options.fallbackFlowchartConfidence;
   const parsed = Number(rawValue);
 
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
