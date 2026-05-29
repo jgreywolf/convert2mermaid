@@ -1,6 +1,7 @@
 import { DiagramDetector } from './DiagramDetector.js';
-import { DiagramType, DiagramAnalysis } from './types.js';
-import { parseStringPromise } from 'xml2js';
+import { DiagramType, DiagramAnalysis, DetectionOptions, DetectionPattern } from './types.js';
+
+const DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE = 50;
 
 /**
  * DrawIO-specific diagram detection that analyzes raw XML structure
@@ -10,38 +11,40 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Analyzes DrawIO XML content for diagram type detection
    */
-  public async analyzeDrawIOFile(buffer: Buffer): Promise<DiagramAnalysis> {
+  public async analyzeDrawIOFile(buffer: Buffer, options: DetectionOptions = {}): Promise<DiagramAnalysis> {
     try {
+      const xmlContent = buffer.toString('utf-8');
+      if (!xmlContent.includes('<mxfile') || !xmlContent.includes('<mxGraphModel')) {
+        return this.createUnknownAnalysis();
+      }
+
       // First, try to detect from raw XML structure
       const xmlAnalysis = await this.analyzeXMLStructure(buffer);
 
-      // If we get a high-confidence result from XML, return it
-      if (xmlAnalysis.confidence >= 80) {
-        return xmlAnalysis;
-      }
-
-      // Otherwise, fall back to shape-based analysis
-      // This would require parsing the shapes first
-      return xmlAnalysis; // For now, return XML analysis
+      return this.applyFlowchartFallback(xmlAnalysis, options);
     } catch (error) {
       console.error('Error analyzing DrawIO file:', error);
-      return {
-        detectedType: DiagramType.UNKNOWN,
-        confidence: 0,
-        patterns: [],
-        metadata: {
-          totalShapes: 0,
-          totalEdges: 0,
-          shapeTypes: [],
-          hasSpecializedShapes: false,
-          hasDirectionalFlow: false,
-          hasHierarchy: false,
-          hasTemporal: false,
-          hasDataModel: false,
-          hasNetworkElements: false,
-        },
-      };
+      return this.createUnknownAnalysis();
     }
+  }
+
+  private createUnknownAnalysis(): DiagramAnalysis {
+    return {
+      detectedType: DiagramType.UNKNOWN,
+      confidence: 0,
+      patterns: [],
+      metadata: {
+        totalShapes: 0,
+        totalEdges: 0,
+        shapeTypes: [],
+        hasSpecializedShapes: false,
+        hasDirectionalFlow: false,
+        hasHierarchy: false,
+        hasTemporal: false,
+        hasDataModel: false,
+        hasNetworkElements: false,
+      },
+    };
   }
 
   /**
@@ -274,6 +277,35 @@ export class DrawIODetector extends DiagramDetector {
       confidence: Math.min(100, confidence),
       evidence,
       weight: confidence,
+    };
+  }
+
+  private applyFlowchartFallback(analysis: DiagramAnalysis, options: DetectionOptions): DiagramAnalysis {
+    const threshold = options.fallbackFlowchartConfidence ?? DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE;
+
+    if (analysis.detectedType === DiagramType.FLOWCHART && analysis.confidence > 0) {
+      return analysis;
+    }
+
+    if (analysis.detectedType !== DiagramType.UNKNOWN && analysis.confidence >= threshold) {
+      return analysis;
+    }
+
+    const flowchartPattern = analysis.patterns.find((pattern) => pattern.type === DiagramType.FLOWCHART);
+    const fallbackPattern: DetectionPattern = flowchartPattern || {
+      type: DiagramType.FLOWCHART,
+      evidence: [`Fallback to flowchart because detection confidence was below ${threshold}%`],
+      weight: threshold,
+      confidence: Math.max(analysis.confidence, threshold),
+    };
+
+    return {
+      ...analysis,
+      detectedType: DiagramType.FLOWCHART,
+      confidence: fallbackPattern.confidence,
+      patterns: analysis.patterns.some((pattern) => pattern.type === DiagramType.FLOWCHART)
+        ? analysis.patterns
+        : [...analysis.patterns, fallbackPattern],
     };
   }
 

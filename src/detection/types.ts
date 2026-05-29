@@ -23,6 +23,10 @@ export interface DiagramAnalysis {
   metadata: DiagramMetadata;
 }
 
+export interface DetectionOptions {
+  fallbackFlowchartConfidence?: number;
+}
+
 export interface DetectionPattern {
   type: string;
   evidence: string[];

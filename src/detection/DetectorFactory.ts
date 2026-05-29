@@ -1,7 +1,7 @@
 import { DiagramDetector } from './DiagramDetector.js';
 import { DrawIODetector } from './DrawIODetector.js';
 import { PlantUMLDetector } from './PlantUMLDetector.js';
-import { DiagramType, DiagramAnalysis } from './types.js';
+import { DiagramType, DiagramAnalysis, DetectionOptions } from './types.js';
 import { Shape } from '../types.js';
 import * as path from 'path';
 
@@ -31,7 +31,7 @@ export class DetectorFactory {
   /**
    * Analyzes a diagram file and returns the detected type
    */
-  public static async analyzeFile(filePath: string, buffer?: Buffer): Promise<DiagramAnalysis> {
+  public static async analyzeFile(filePath: string, buffer?: Buffer, options: DetectionOptions = {}): Promise<DiagramAnalysis> {
     const extension = path.extname(filePath).toLowerCase();
 
     try {
@@ -43,7 +43,7 @@ export class DetectorFactory {
       switch (extension) {
         case '.drawio':
           const drawioDetector = new DrawIODetector();
-          return await drawioDetector.analyzeDrawIOFile(buffer);
+          return await drawioDetector.analyzeDrawIOFile(buffer, options);
 
         case '.puml':
         case '.plantuml':

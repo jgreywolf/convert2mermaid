@@ -79,6 +79,29 @@ describe('DiagramDetector', () => {
       expect(analysis.detectedType).toBe(DiagramType.FLOWCHART);
       expect(analysis.confidence).toBeGreaterThan(0);
     });
+
+    it('should fall back low-confidence DrawIO detections to flowchart', async () => {
+      const filePath = path.join(testDir, 'EdgesArrowsAndStyling.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
+
+      expect(analysis.detectedType).toBe(DiagramType.FLOWCHART);
+      expect(analysis.patterns.some((pattern) => pattern.type === DiagramType.FLOWCHART)).toBe(true);
+    });
+
+    it('should use the configured DrawIO flowchart fallback threshold', async () => {
+      const filePath = path.join(testDir, 'ComponentDiagram.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const defaultAnalysis = await DetectorFactory.analyzeFile(filePath, buffer);
+      const strictAnalysis = await DetectorFactory.analyzeFile(filePath, buffer, {
+        fallbackFlowchartConfidence: 80,
+      });
+
+      expect(defaultAnalysis.detectedType).toBe(DiagramType.COMPONENT);
+      expect(strictAnalysis.detectedType).toBe(DiagramType.FLOWCHART);
+    });
   });
 
   describe('PlantUML Detection', () => {
