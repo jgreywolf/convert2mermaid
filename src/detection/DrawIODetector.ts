@@ -239,6 +239,7 @@ export class DrawIODetector extends DiagramDetector {
   private analyzeStatePatterns(xml: string) {
     const evidence = [];
     let confidence = 0;
+    const labels = this.extractCellLabels(xml);
 
     // Check for state shapes
     if (xml.includes('shape=startState') || xml.includes('shape=endState')) {
@@ -252,8 +253,9 @@ export class DrawIODetector extends DiagramDetector {
       confidence += 25;
     }
 
-    // Check for state transition notation
-    if (xml.includes('[') && xml.includes(']') && xml.includes('/')) {
+    // Check for state transition notation in user-facing cell labels.
+    // Avoid treating XML syntax or DrawIO style values like points=[] as state transitions.
+    if (labels.some((label) => /(\[[^\]]+\]\s*\/|\S+\s*\/\s*\S+|when\s+)/i.test(label))) {
       evidence.push('Found state transition notation');
       confidence += 30;
     }
@@ -273,6 +275,20 @@ export class DrawIODetector extends DiagramDetector {
       evidence,
       weight: confidence,
     };
+  }
+
+  private extractCellLabels(xml: string): string[] {
+    const valueMatches = xml.matchAll(/\bvalue="([^"]*)"/g);
+    return [...valueMatches]
+      .map((match) =>
+        match[1]
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&amp;/g, '&')
+          .replace(/<[^>]*>/g, '')
+          .trim()
+      )
+      .filter((label) => label.length > 0);
   }
 
   /**
@@ -432,7 +448,11 @@ export class DrawIODetector extends DiagramDetector {
       confidence += 25;
     }
 
-    if (xml.includes('shape=rectangle')) {
+    if (
+      xml.includes('shape=rectangle') ||
+      xml.includes('shape=process') ||
+      /<mxCell\b[^>]*vertex="1"[^>]*style="[^"]*(rounded=0|whiteSpace=wrap)[^"]*"/.test(xml)
+    ) {
       evidence.push('Found process rectangles');
       confidence += 20;
     }

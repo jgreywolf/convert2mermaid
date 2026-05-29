@@ -69,6 +69,16 @@ describe('DiagramDetector', () => {
       expect(analysis.detectedType).toBe(DiagramType.NETWORK);
       expect(analysis.confidence).toBeGreaterThan(70);
     });
+
+    it('should detect a generic DrawIO rectangle connector diagram as flowchart', async () => {
+      const filePath = path.join(testDir, 'drawio.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
+
+      expect(analysis.detectedType).toBe(DiagramType.FLOWCHART);
+      expect(analysis.confidence).toBeGreaterThan(0);
+    });
   });
 
   describe('PlantUML Detection', () => {
