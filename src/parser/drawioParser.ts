@@ -446,6 +446,10 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
     }
   }
 
+  if (shape.IsEdge && !hasStyleKey(stylePairs, 'endArrow') && !hasStyleKey(stylePairs, 'startArrow')) {
+    shape.Style.EndArrow = 1;
+  }
+
   // Special handling for combined styles
   const combinedStyle = stylePairs.join(';').toLowerCase();
 
@@ -462,6 +466,9 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
     shape.ShapeType = getMermaidShapeByValue('circle');
   }
 };
+
+const hasStyleKey = (stylePairs: string[], expectedKey: string): boolean =>
+  stylePairs.some((pair) => pair.split('=')[0].trim().toLowerCase() === expectedKey.toLowerCase());
 
 // Map DrawIO shape names to MermaidShape enum using getMermaidShapeByValue
 const mapDrawIOShapeToMermaid = (drawioShape: string): MermaidShape => {

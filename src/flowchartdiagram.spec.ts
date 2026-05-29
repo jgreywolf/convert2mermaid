@@ -90,7 +90,7 @@ describe('Flowchart diagram generation', () => {
       const mermaidCode = generateMermaidCode(diagram);
 
       expect(mermaidCode).toContain('n0source -->|go| n0target');
-      expect(mermaidCode).toContain('n0target --- n0next');
+      expect(mermaidCode).toContain('n0target --> n0next');
       expect(mermaidCode).not.toContain('skip');
       expect(mermaidCode).not.toContain(' n0\r\n');
       expect(mermaidCode).not.toContain('----');
@@ -142,6 +142,54 @@ describe('Flowchart diagram generation', () => {
 
       expect(mermaidCode).toContain('n0callout --- n0target');
       expect(mermaidCode).not.toContain('n0callout --- n0other');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
+  });
+
+  it('uses DrawIO default arrows for edges without explicit arrow styles', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="source" value="Source" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="120" height="60" as="geometry"/></mxCell><mxCell id="target" value="Target" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="220" width="120" height="60" as="geometry"/></mxCell><mxCell id="plain" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="source" target="target"><mxGeometry relative="1" as="geometry"/></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-default-arrow-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse default arrow fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0source --> n0target');
+      expect(mermaidCode).not.toContain('n0source --- n0target');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
+  });
+
+  it('preserves explicitly arrowless DrawIO edges', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="source" value="Source" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="120" height="60" as="geometry"/></mxCell><mxCell id="target" value="Target" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="220" width="120" height="60" as="geometry"/></mxCell><mxCell id="plain" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=none;" edge="1" parent="1" source="source" target="target"><mxGeometry relative="1" as="geometry"/></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-no-arrow-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse explicit no-arrow fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0source --- n0target');
+      expect(mermaidCode).not.toContain('n0source --> n0target');
     } finally {
       fs.rmSync(testFile, { force: true });
     }

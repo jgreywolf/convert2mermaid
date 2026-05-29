@@ -245,7 +245,7 @@ export const buildEdgeStatement = (
     endArrow = '>';
   }
 
-  let { startStroke, endStroke } = getStroke(style.LinePattern);
+  const stroke = getEdgeStroke(style.LinePattern);
   if (startArrow === '<' && endArrow === '') {
     return `${end} -->${sanitizedText} ${start}`;
   }
@@ -258,7 +258,17 @@ export const buildEdgeStatement = (
     return `${start} --- ${end}`;
   }
 
-  return `${start} ${startArrow}${startStroke}${endStroke}${endArrow} ${end}`;
+  return `${start} ${startArrow}${stroke}${endArrow} ${end}`;
+};
+
+const getEdgeStroke = (linePattern: number): string => {
+  switch (linePattern) {
+    case 2:
+    case 3:
+      return '-.';
+    default:
+      return '--';
+  }
 };
 
 /**
