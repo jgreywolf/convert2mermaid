@@ -58,10 +58,12 @@ export const getShapes = (jsonObj: any): Shape[] => {
     const edgeLabels = new Map<string, string>(); // Map edge ID to label
     const swimlanes = new Map<string, DrawIOCell>(); // Map swimlane ID to cell
     const swimlaneChildren = new Map<string, DrawIOCell[]>(); // Map parent ID to children
+    const rawCellMap = new Map<string, any>();
 
     for (const cell of cells) {
       const cellData = cell['$'] as DrawIOCell;
       cellMap.set(cellData.id, cellData);
+      rawCellMap.set(cellData.id, cell);
 
       // Identify swimlanes (class containers)
       if (cellData.style && cellData.style.includes('swimlane')) {
@@ -137,8 +139,8 @@ export const getShapes = (jsonObj: any): Shape[] => {
         Label: label,
         Style: createDefaultStyle(),
         IsEdge: cellData.edge === '1',
-        FromNode: cellData.source || '',
-        ToNode: cellData.target || '',
+        FromNode: cellData.source || resolveEndpointFromPoint(rawCellMap.get(id), rawCellMap, 'sourcePoint'),
+        ToNode: cellData.target || resolveEndpointFromPoint(rawCellMap.get(id), rawCellMap, 'targetPoint'),
         ParentNode: cellData.parent || '',
       };
 
@@ -192,6 +194,74 @@ export const getShapes = (jsonObj: any): Shape[] => {
   }
 
   return shapes;
+};
+
+const resolveEndpointFromPoint = (
+  edgeCell: any,
+  rawCellMap: Map<string, any>,
+  pointName: 'sourcePoint' | 'targetPoint'
+): string => {
+  const point = readGeometryPoint(edgeCell, pointName);
+  if (!point) {
+    return '';
+  }
+
+  for (const [id, rawCell] of rawCellMap.entries()) {
+    const attrs = rawCell?.$ as DrawIOCell | undefined;
+    if (!attrs || attrs.vertex !== '1') {
+      continue;
+    }
+
+    const bounds = readGeometryBounds(rawCell);
+    if (bounds && isPointInBounds(point, bounds)) {
+      return id;
+    }
+  }
+
+  return '';
+};
+
+const readGeometryPoint = (cell: any, pointName: 'sourcePoint' | 'targetPoint'): { x: number; y: number } | undefined => {
+  const points = cell?.mxGeometry?.[0]?.mxPoint || [];
+  const point = points.find((candidate: any) => candidate?.$?.as === pointName);
+  if (!point?.$) {
+    return undefined;
+  }
+
+  const x = Number(point.$.x);
+  const y = Number(point.$.y);
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+};
+
+const readGeometryBounds = (cell: any): { x: number; y: number; width: number; height: number } | undefined => {
+  const geometry = cell?.mxGeometry?.[0]?.$;
+  if (!geometry) {
+    return undefined;
+  }
+
+  const x = Number(geometry.x);
+  const y = Number(geometry.y);
+  const width = Number(geometry.width);
+  const height = Number(geometry.height);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return undefined;
+  }
+
+  return { x, y, width, height };
+};
+
+const isPointInBounds = (
+  point: { x: number; y: number },
+  bounds: { x: number; y: number; width: number; height: number }
+): boolean => {
+  const tolerance = 2;
+  return (
+    point.x >= bounds.x - tolerance &&
+    point.x <= bounds.x + bounds.width + tolerance &&
+    point.y >= bounds.y - tolerance &&
+    point.y <= bounds.y + bounds.height + tolerance
+  );
 };
 
 // Parse DrawIO style string and apply to shape

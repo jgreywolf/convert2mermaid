@@ -1,4 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { deflateRawSync } from 'zlib';
 import { parseData } from './parser/parser.js';
 import { generateMermaidCode } from './scribe.js';
 
@@ -40,5 +44,33 @@ describe('Flowchart diagram generation', () => {
     expect(mermaidCode).not.toContain('---|Red thick edge|');
     expect(mermaidCode).toContain('style n02Qw8IFYnQMUSFGZe73MK_1 stroke: #008040,fill: #f8cecc');
     expect(mermaidCode).not.toContain('light-dark(');
+  });
+
+  it('resolves DrawIO point-only edge endpoints and emits valid open links', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="source" value="Source" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="120" height="60" as="geometry"/></mxCell><mxCell id="target" value="Target" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="220" width="120" height="60" as="geometry"/></mxCell><mxCell id="next" value="Next" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="340" width="120" height="60" as="geometry"/></mxCell><mxCell id="labeled" value="go" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="source"><mxGeometry relative="1" as="geometry"><mxPoint x="160" y="220" as="targetPoint"/></mxGeometry></mxCell><mxCell id="open" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="target"><mxGeometry relative="1" as="geometry"><mxPoint x="160" y="340" as="targetPoint"/></mxGeometry></mxCell><mxCell id="dangling" value="skip" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="next"><mxGeometry relative="1" as="geometry"><mxPoint x="900" y="900" as="targetPoint"/></mxGeometry></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-point-edge-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse point-only edge fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0source -->|go| n0target');
+      expect(mermaidCode).toContain('n0target --- n0next');
+      expect(mermaidCode).not.toContain('skip');
+      expect(mermaidCode).not.toContain(' n0\r\n');
+      expect(mermaidCode).not.toContain('----');
+      expect(mermaidCode).not.toMatch(/\s+n0(?:\r?\n|$)/);
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
   });
 });

@@ -241,16 +241,16 @@ export const buildEdgeStatement = (
   }
 
   let { startStroke, endStroke } = getStroke(style.LinePattern);
-  if (startArrow === '' && sanitizedText === '') {
-    startStroke = '';
-  }
-
   if (startArrow === '<' && endArrow === '') {
     return `${end} -->${sanitizedText} ${start}`;
   }
 
   if (sanitizedText) {
     return `${start} -->${sanitizedText} ${end}`;
+  }
+
+  if (startArrow === '' && endArrow === '') {
+    return `${start} --- ${end}`;
   }
 
   return `${start} ${startArrow}${startStroke}${endStroke}${endArrow} ${end}`;

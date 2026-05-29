@@ -44,6 +44,9 @@ export const generateFlowchartDiagram = (diagram: Diagram): string => {
     edges.forEach((edge) => {
       const edgeStart = `${edge.FromNode}`;
       const edgeEnd = `${edge.ToNode}`;
+      if (!edgeStart || !edgeEnd) {
+        return;
+      }
 
       const edgeStatement = buildEdgeStatement(edgeStart, edgeEnd, edge.Style, edge.Label, sanitizeEdgeLabel);
       mermaidSyntax += edgeStatement;

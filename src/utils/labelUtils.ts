@@ -59,8 +59,8 @@ export const shapeToNode = (shape: Shape): NodeRecord => {
 
 export const shapeToConnector = (connectorShape: Shape): Shape => {
   const edge = connectorShape;
-  edge.FromNode = sanitizeMermaidId(`n0${connectorShape.FromNode}`);
-  edge.ToNode = sanitizeMermaidId(`n0${connectorShape.ToNode}`);
+  edge.FromNode = connectorShape.FromNode ? sanitizeMermaidId(`n0${connectorShape.FromNode}`) : '';
+  edge.ToNode = connectorShape.ToNode ? sanitizeMermaidId(`n0${connectorShape.ToNode}`) : '';
 
   return edge;
 };
