@@ -210,7 +210,7 @@ export const buildEdgeStatement = (
 
   // Sanitize the edge label text with special handling for edge labels
   const sanitizedLabel = sanitizeEdgeLabelFn(text).replace(/^"|"$/g, '');
-  const sanitizedText = sanitizedLabel ? `|${sanitizedLabel}|` : '';
+  const sanitizedText = sanitizedLabel ? `"${sanitizedLabel.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"` : '';
 
   switch (startArrow) {
     case '>':
@@ -231,16 +231,14 @@ export const buildEdgeStatement = (
   }
 
   if (startArrow === '<' && endArrow === '') {
-    const labeledStroke = sanitizedText ? `${endStroke}-${sanitizedText}` : endStroke;
-    return `${end} ${labeledStroke}${startStroke}> ${start}`;
+    const reverseStartStroke = endStroke === '.-' ? '-.' : endStroke;
+    const reverseEndStroke = startStroke === '-.' ? '.-' : startStroke;
+    const labelSegment = sanitizedText ? ` ${sanitizedText} ` : '';
+    return `${end} ${reverseStartStroke}${labelSegment}${reverseEndStroke}> ${start}`;
   }
 
   if (sanitizedText) {
-    if (endArrow) {
-      return `${start} ${startArrow}${startStroke}${sanitizedText}${endStroke}${endArrow} ${end}`;
-    }
-
-    return `${start} ${startStroke}-${sanitizedText} ${end}`;
+    return `${start} ${startArrow}${startStroke} ${sanitizedText} ${endStroke}${endArrow} ${end}`;
   }
 
   return `${start} ${startArrow}${startStroke}${endStroke}${endArrow} ${end}`;
