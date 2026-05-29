@@ -38,6 +38,11 @@ export const sanitizeClassName = (name: string): string => {
   return name.replace(/[^a-zA-Z0-9_]/g, '').replace(/^[0-9]/, '_$&');
 };
 
+export const sanitizeMermaidId = (id: string): string => {
+  const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
+  return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `id_${sanitized}`;
+};
+
 export interface NodeRecord {
   ID: string;
   Shape: Shape;
@@ -45,7 +50,7 @@ export interface NodeRecord {
 }
 
 export const shapeToNode = (shape: Shape): NodeRecord => {
-  const nodeId = `n0${shape.Id}`;
+  const nodeId = sanitizeMermaidId(`n0${shape.Id}`);
   const nodeShape = getMermaidShapeByValue(shape.ShapeType);
   const sanitizedLabel = sanitizeLabel(shape.Label);
   const nodeDef = `${nodeId}@{ shape: ${nodeShape}, label: ${sanitizedLabel} }`;
@@ -54,8 +59,8 @@ export const shapeToNode = (shape: Shape): NodeRecord => {
 
 export const shapeToConnector = (connectorShape: Shape): Shape => {
   const edge = connectorShape;
-  edge.FromNode = `n0${connectorShape.FromNode}`;
-  edge.ToNode = `n0${connectorShape.ToNode}`;
+  edge.FromNode = sanitizeMermaidId(`n0${connectorShape.FromNode}`);
+  edge.ToNode = sanitizeMermaidId(`n0${connectorShape.ToNode}`);
 
   return edge;
 };

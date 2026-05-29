@@ -209,7 +209,8 @@ export const buildEdgeStatement = (
   let endArrow = getArrow(style.EndArrow);
 
   // Sanitize the edge label text with special handling for edge labels
-  const sanitizedText = sanitizeEdgeLabelFn(text);
+  const sanitizedLabel = sanitizeEdgeLabelFn(text);
+  const sanitizedText = sanitizedLabel ? ` ${sanitizedLabel} ` : '';
 
   switch (startArrow) {
     case '>':
