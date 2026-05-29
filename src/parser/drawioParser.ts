@@ -255,7 +255,7 @@ const isPointInBounds = (
   point: { x: number; y: number },
   bounds: { x: number; y: number; width: number; height: number }
 ): boolean => {
-  const tolerance = 2;
+  const tolerance = 10;
   return (
     point.x >= bounds.x - tolerance &&
     point.x <= bounds.x + bounds.width + tolerance &&

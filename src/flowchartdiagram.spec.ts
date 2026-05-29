@@ -99,4 +99,27 @@ describe('Flowchart diagram generation', () => {
       fs.rmSync(testFile, { force: true });
     }
   });
+
+  it('resolves DrawIO point-only edge endpoints just outside node bounds', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="decision" value="Result" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="120" height="80" as="geometry"/></mxCell><mxCell id="failure" value="Failure" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="300" y="100" width="100" height="100" as="geometry"/></mxCell><mxCell id="edge" value="failed" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;" edge="1" parent="1" source="decision"><mxGeometry relative="1" as="geometry"><mxPoint x="295" y="150" as="targetPoint"/></mxGeometry></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-near-edge-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse near-boundary edge fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0decision -->|failed| n0failure');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
+  });
 });
