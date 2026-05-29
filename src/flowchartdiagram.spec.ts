@@ -18,6 +18,7 @@ describe('Flowchart diagram generation', () => {
     const mermaidCode = generateMermaidCode(diagram);
 
     expect(mermaidCode).toMatch(/^flowchart TD/);
+    expect(mermaidCode).toContain('n0_5xJdOhSlpbQAjnFqhUo_4[" "]');
     expect(mermaidCode).toContain('n0F7vi46eRVVwoKnTOABEj_1["Rect1"]');
     expect(mermaidCode).toContain('n0F7vi46eRVVwoKnTOABEj_1 -->|connect1| n0F7vi46eRVVwoKnTOABEj_2');
     expect(mermaidCode).not.toContain('@{');

@@ -52,7 +52,7 @@ export interface NodeRecord {
 export const shapeToNode = (shape: Shape): NodeRecord => {
   const nodeId = sanitizeMermaidId(`n0${shape.Id}`);
   const nodeShape = getMermaidShapeByValue(shape.ShapeType);
-  const sanitizedLabel = sanitizeLabel(shape.Label);
+  const sanitizedLabel = sanitizeLabel(shape.Label) || ' ';
   const nodeDef = buildLegacyFlowchartNode(nodeId, nodeShape, sanitizedLabel);
   return { ID: nodeId, Shape: shape, NodeDef: nodeDef };
 };
