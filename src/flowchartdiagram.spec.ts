@@ -38,5 +38,7 @@ describe('Flowchart diagram generation', () => {
     expect(mermaidCode).not.toContain('-- "x arrow head" -->');
     expect(mermaidCode).not.toContain('-- "both direction arrows" -->');
     expect(mermaidCode).not.toContain('---|Red thick edge|');
+    expect(mermaidCode).toContain('style n02Qw8IFYnQMUSFGZe73MK_1 stroke: #008040,fill: #f8cecc');
+    expect(mermaidCode).not.toContain('light-dark(');
   });
 });
