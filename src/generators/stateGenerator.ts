@@ -7,7 +7,7 @@ const sanitizeStateId = (id: string): string => {
 };
 
 export const generateStateDiagram = (diagram: Diagram): string => {
-  let mermaidSyntax = 'stateDiagram-v2\r\n';
+  let mermaidSyntax = 'stateDiagram-v2\n';
 
   const states: Shape[] = [];
   const transitions: Shape[] = [];
@@ -19,20 +19,16 @@ export const generateStateDiagram = (diagram: Diagram): string => {
       transitions.push(shape);
     } else {
       states.push(shape);
-      stateIds.set(shape.Id, sanitizeStateId(shape.Id));
+      stateIds.set(shape.Id, getStateId(shape));
     }
   }
 
   // Generate state definitions
   for (const state of states) {
     const stateName = sanitizeLabel(state.Label) || state.Id;
-    const stateId = stateIds.get(state.Id) || sanitizeStateId(state.Id);
-    if (stateName.toLowerCase().includes('start') || stateName.toLowerCase().includes('initial')) {
-      mermaidSyntax += `  [*] --> ${stateId}\r\n`;
-    } else if (stateName.toLowerCase().includes('end') || stateName.toLowerCase().includes('final')) {
-      mermaidSyntax += `  ${stateId} --> [*]\r\n`;
-    } else {
-      mermaidSyntax += `  state "${stateName}" as ${stateId}\r\n`;
+    const stateId = stateIds.get(state.Id) || getStateId(state);
+    if (stateId !== '[*]') {
+      mermaidSyntax += `  state "${stateName}" as ${stateId}\n`;
     }
   }
 
@@ -43,9 +39,26 @@ export const generateStateDiagram = (diagram: Diagram): string => {
     const trigger = transition.Label ? ` : ${sanitizeLabel(transition.Label)}` : '';
 
     if (from && to) {
-      mermaidSyntax += `  ${from} --> ${to}${trigger}\r\n`;
+      mermaidSyntax += `  ${from} --> ${to}${trigger}\n`;
     }
   }
 
   return mermaidSyntax;
+};
+
+const getStateId = (state: Shape): string => {
+  const label = sanitizeLabel(state.Label).toLowerCase();
+  const id = state.Id.toLowerCase();
+  const shapeType = state.ShapeType.toLowerCase();
+  const isUnlabeled = label.length === 0;
+
+  if (
+    shapeType.includes('startstate') ||
+    shapeType.includes('endstate') ||
+    (isUnlabeled && (id === 'initial' || id === 'final' || id.includes('initialstate') || id.includes('finalstate')))
+  ) {
+    return '[*]';
+  }
+
+  return sanitizeStateId(state.Id);
 };

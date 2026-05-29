@@ -87,6 +87,7 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
 
   const aliasMap = new Map<string, string>();
   const usedAliases = new Set<string>();
+  const declaredParticipants = [...actors, ...participants.filter((participant) => hasParticipantLabel(participant))];
 
   // Add autonumber if sequence numbers were detected
   if (hasSequenceNumbers) {
@@ -103,7 +104,7 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
   }
 
   // Generate participant declarations
-  for (const participant of participants) {
+  for (const participant of participants.filter((participant) => hasParticipantLabel(participant))) {
     const participantName = sanitizeLabel(participant.Label) || participant.Id;
     const alias = generateAlias(participantName, usedAliases);
     usedAliases.add(alias);
@@ -111,12 +112,31 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     mermaidSyntax += `  participant ${alias} as ${participantName}\n`;
   }
 
-  for (const activation of diagram.Shapes.filter((shape) => shape.ParticipantType === 'activation')) {
+  const unlabeledLifelines = participants.filter((participant) => !hasParticipantLabel(participant));
+  unlabeledLifelines.forEach((lifeline, index) => {
+    const owner = declaredParticipants[index];
+    const ownerAlias = owner ? aliasMap.get(owner.Id) : undefined;
+    if (ownerAlias) {
+      aliasMap.set(lifeline.Id, ownerAlias);
+    }
+  });
+
+  const activations = diagram.Shapes.filter((shape) => shape.ParticipantType === 'activation');
+  for (const activation of activations) {
     const parentAlias = activation.ParentNode ? aliasMap.get(activation.ParentNode) : undefined;
     if (parentAlias) {
       aliasMap.set(activation.Id, parentAlias);
     }
   }
+
+  const unmappedActivations = activations.filter((activation) => !aliasMap.has(activation.Id));
+  unmappedActivations.forEach((activation, index) => {
+    const owner = declaredParticipants[index];
+    const ownerAlias = owner ? aliasMap.get(owner.Id) : undefined;
+    if (ownerAlias) {
+      aliasMap.set(activation.Id, ownerAlias);
+    }
+  });
 
   // Generate message flows
   for (const message of messages) {
@@ -166,3 +186,5 @@ const sanitizeSequenceAlias = (id: string): string => {
   const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
   return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `P_${sanitized}`;
 };
+
+const hasParticipantLabel = (shape: Shape): boolean => Boolean(shape.Label && shape.Label.trim().length > 0);

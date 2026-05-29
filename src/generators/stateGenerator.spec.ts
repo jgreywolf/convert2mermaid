@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { generateStateDiagram } from './stateGenerator.js';
 import { Diagram, Shape, Style } from '../types.js';
+import { parseData } from '../parser/parser.js';
+import { generateMermaidCode } from '../scribe.js';
 
 const defaultStyle: Style = {
   FillForeground: '',
@@ -49,5 +51,25 @@ describe('State diagram generation', () => {
     expect(mermaidCode).toContain('state "Rect1" as F7vi46eRVVwoKnTOABEj_1');
     expect(mermaidCode).toContain('F7vi46eRVVwoKnTOABEj_1 --> F7vi46eRVVwoKnTOABEj_2 : connect1');
     expect(mermaidCode).not.toContain('F7vi46eRVVwoKnTOABEj-1 -->');
+  });
+
+  it('maps DrawIO initial and final state nodes directly to Mermaid start/end markers', async () => {
+    const diagram = await parseData('tests/StateDiagram.drawio');
+
+    expect(diagram).toBeDefined();
+    if (!diagram) {
+      throw new Error('Failed to parse state fixture');
+    }
+
+    const mermaidCode = generateMermaidCode(diagram);
+
+    expect(mermaidCode).toContain('[*] --> state1 : start');
+    expect(mermaidCode).toContain('state4 --> [*] : end');
+    expect(mermaidCode).toContain('state3 --> state2 : resume');
+    expect(mermaidCode).toContain('state5 --> state1 : reset');
+    expect(mermaidCode).not.toContain('state "initial" as initial');
+    expect(mermaidCode).not.toContain('state "final" as final');
+    expect(mermaidCode).not.toContain('initial --> state1');
+    expect(mermaidCode).not.toContain('state4 --> final');
   });
 });
