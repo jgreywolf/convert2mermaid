@@ -189,12 +189,99 @@ export const getShapes = (jsonObj: any): Shape[] => {
 
       shapes.push(shape);
     }
+
+    addInferredCalloutEdges(shapes, rawCellMap);
   } catch (e) {
     console.error('Error parsing DrawIO file:', e);
   }
 
   return shapes;
 };
+
+const addInferredCalloutEdges = (shapes: Shape[], rawCellMap: Map<string, any>): void => {
+  const connectedShapeIds = new Set<string>();
+  for (const shape of shapes) {
+    if (!shape.IsEdge) {
+      continue;
+    }
+    if (shape.FromNode) {
+      connectedShapeIds.add(shape.FromNode);
+    }
+    if (shape.ToNode) {
+      connectedShapeIds.add(shape.ToNode);
+    }
+  }
+
+  for (const callout of shapes.filter((shape) => !shape.IsEdge && isCalloutCell(rawCellMap.get(shape.Id)))) {
+    if (connectedShapeIds.has(callout.Id)) {
+      continue;
+    }
+
+    const target = findCalloutTarget(callout, shapes, rawCellMap);
+    if (!target) {
+      continue;
+    }
+
+    shapes.push({
+      Id: `${callout.Id}_callout_link`,
+      ShapeType: getMermaidShapeByValue('rectangle'),
+      Label: '',
+      Style: createDefaultStyle(),
+      IsEdge: true,
+      FromNode: callout.Id,
+      ToNode: target.Id,
+      ParentNode: callout.ParentNode,
+    });
+  }
+};
+
+const isCalloutCell = (cell: any): boolean => {
+  const style = String((cell?.$ as DrawIOCell | undefined)?.style || '').toLowerCase();
+  return style.includes('shape=callout') || style.includes('perimeter=calloutperimeter');
+};
+
+const findCalloutTarget = (callout: Shape, shapes: Shape[], rawCellMap: Map<string, any>): Shape | undefined => {
+  const calloutBounds = readGeometryBounds(rawCellMap.get(callout.Id));
+  if (!calloutBounds) {
+    return undefined;
+  }
+
+  const candidates = shapes
+    .filter((shape) => !shape.IsEdge && shape.Id !== callout.Id && !isCalloutCell(rawCellMap.get(shape.Id)))
+    .map((shape) => ({ shape, score: getCalloutTargetScore(calloutBounds, readGeometryBounds(rawCellMap.get(shape.Id))) }))
+    .filter((candidate): candidate is { shape: Shape; score: number } => candidate.score !== undefined)
+    .sort((left, right) => left.score - right.score);
+
+  return candidates[0]?.shape;
+};
+
+const getCalloutTargetScore = (
+  callout: { x: number; y: number; width: number; height: number },
+  target?: { x: number; y: number; width: number; height: number }
+): number | undefined => {
+  if (!target) {
+    return undefined;
+  }
+
+  const tolerance = 10;
+  const horizontalOverlap = getRangeOverlap(callout.x, callout.x + callout.width, target.x, target.x + target.width);
+  const verticalOverlap = getRangeOverlap(callout.y, callout.y + callout.height, target.y, target.y + target.height);
+  const verticalGap = Math.max(target.y - (callout.y + callout.height), callout.y - (target.y + target.height), 0);
+  const horizontalGap = Math.max(target.x - (callout.x + callout.width), callout.x - (target.x + target.width), 0);
+
+  if (horizontalOverlap > 0 && verticalGap <= tolerance) {
+    return verticalGap;
+  }
+
+  if (verticalOverlap > 0 && horizontalGap <= tolerance) {
+    return horizontalGap;
+  }
+
+  return undefined;
+};
+
+const getRangeOverlap = (leftStart: number, leftEnd: number, rightStart: number, rightEnd: number): number =>
+  Math.max(0, Math.min(leftEnd, rightEnd) - Math.max(leftStart, rightStart));
 
 const resolveEndpointFromPoint = (
   edgeCell: any,

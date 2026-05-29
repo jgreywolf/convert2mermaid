@@ -122,4 +122,28 @@ describe('Flowchart diagram generation', () => {
       fs.rmSync(testFile, { force: true });
     }
   });
+
+  it('infers associations between unconnected DrawIO callouts and adjacent nodes', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="callout" value="Search types" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="220" height="80" as="geometry"/></mxCell><mxCell id="target" value="Call SearchFilename" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="180" width="220" height="80" as="geometry"/></mxCell><mxCell id="other" value="Other" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="500" y="180" width="220" height="80" as="geometry"/></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-callout-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse callout association fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0callout --- n0target');
+      expect(mermaidCode).not.toContain('n0callout --- n0other');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
+  });
 });
