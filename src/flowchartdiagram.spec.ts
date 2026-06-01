@@ -123,6 +123,30 @@ describe('Flowchart diagram generation', () => {
     }
   });
 
+  it('resolves DrawIO edges that target another edge back to the terminal node', async () => {
+    const mxGraphModel =
+      '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="start" value="Start" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="320" y="240" width="140" height="60" as="geometry"/></mxCell><mxCell id="decision" value="Check network" style="rhombus;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="310" y="430" width="160" height="80" as="geometry"/></mxCell><mxCell id="sleep" value="Sleep 1s" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="570" y="440" width="120" height="60" as="geometry"/></mxCell><mxCell id="toDecision" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="start"><mxGeometry relative="1" as="geometry"><mxPoint x="390" y="430" as="targetPoint"/></mxGeometry></mxCell><mxCell id="backToFlow" value="retry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="sleep"><mxGeometry relative="1" as="geometry"><mxPoint x="390" y="380" as="targetPoint"/><Array as="points"><mxPoint x="630" y="380"/></Array></mxGeometry></mxCell></root></mxGraphModel>';
+    const compressed = deflateRawSync(Buffer.from(encodeURIComponent(mxGraphModel), 'utf-8')).toString('base64');
+    const testFile = path.join(os.tmpdir(), `convert2mermaid-edge-to-edge-${Date.now()}.drawio`);
+    fs.writeFileSync(testFile, `<mxfile><diagram>${compressed}</diagram></mxfile>`);
+
+    try {
+      const diagram = await parseData(testFile);
+
+      expect(diagram).toBeDefined();
+      if (!diagram) {
+        throw new Error('Failed to parse edge-to-edge fixture');
+      }
+
+      const mermaidCode = generateMermaidCode(diagram);
+
+      expect(mermaidCode).toContain('n0start --> n0decision');
+      expect(mermaidCode).toContain('n0sleep -->|retry| n0decision');
+    } finally {
+      fs.rmSync(testFile, { force: true });
+    }
+  });
+
   it('infers associations between unconnected DrawIO callouts and adjacent nodes', async () => {
     const mxGraphModel =
       '<mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="callout" value="Search types" style="shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;" vertex="1" parent="1"><mxGeometry x="100" y="100" width="220" height="80" as="geometry"/></mxCell><mxCell id="target" value="Call SearchFilename" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="100" y="180" width="220" height="80" as="geometry"/></mxCell><mxCell id="other" value="Other" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1"><mxGeometry x="500" y="180" width="220" height="80" as="geometry"/></mxCell></root></mxGraphModel>';

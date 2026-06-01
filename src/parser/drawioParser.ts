@@ -286,7 +286,8 @@ const getRangeOverlap = (leftStart: number, leftEnd: number, rightStart: number,
 const resolveEndpointFromPoint = (
   edgeCell: any,
   rawCellMap: Map<string, any>,
-  pointName: 'sourcePoint' | 'targetPoint'
+  pointName: 'sourcePoint' | 'targetPoint',
+  visitedEdgeIds = new Set<string>()
 ): string => {
   const point = readGeometryPoint(edgeCell, pointName);
   if (!point) {
@@ -305,6 +306,76 @@ const resolveEndpointFromPoint = (
     }
   }
 
+  const edgeId = String((edgeCell?.$ as DrawIOCell | undefined)?.id || '');
+  if (edgeId) {
+    visitedEdgeIds.add(edgeId);
+  }
+
+  const matchingEdge = findEdgeNearPoint(point, rawCellMap, visitedEdgeIds);
+  if (!matchingEdge) {
+    return '';
+  }
+
+  return pointName === 'targetPoint'
+    ? resolveEdgeTerminal(matchingEdge, rawCellMap, 'to', visitedEdgeIds)
+    : resolveEdgeTerminal(matchingEdge, rawCellMap, 'from', visitedEdgeIds);
+};
+
+const resolveEdgeTerminal = (
+  edgeCell: any,
+  rawCellMap: Map<string, any>,
+  direction: 'from' | 'to',
+  visitedEdgeIds: Set<string>
+): string => {
+  const attrs = edgeCell?.$ as DrawIOCell | undefined;
+  if (!attrs) {
+    return '';
+  }
+
+  if (direction === 'from' && attrs.source) {
+    return attrs.source;
+  }
+
+  if (direction === 'to' && attrs.target) {
+    return attrs.target;
+  }
+
+  const edgeId = String(attrs.id || '');
+  if (edgeId && visitedEdgeIds.has(edgeId)) {
+    return '';
+  }
+
+  const nextVisited = new Set(visitedEdgeIds);
+  if (edgeId) {
+    nextVisited.add(edgeId);
+  }
+
+  return resolveEndpointFromPoint(edgeCell, rawCellMap, direction === 'from' ? 'sourcePoint' : 'targetPoint', nextVisited);
+};
+
+const findEdgeNearPoint = (
+  point: { x: number; y: number },
+  rawCellMap: Map<string, any>,
+  visitedEdgeIds: Set<string>
+): any | undefined => {
+  for (const [id, rawCell] of rawCellMap.entries()) {
+    const attrs = rawCell?.$ as DrawIOCell | undefined;
+    if (!attrs || attrs.edge !== '1' || visitedEdgeIds.has(id)) {
+      continue;
+    }
+
+    const polyline = getEdgePolyline(rawCell, rawCellMap);
+    if (polyline.length < 2) {
+      continue;
+    }
+
+    for (let index = 0; index < polyline.length - 1; index += 1) {
+      if (isPointNearSegment(point, polyline[index], polyline[index + 1])) {
+        return rawCell;
+      }
+    }
+  }
+
   return '';
 };
 
@@ -318,6 +389,17 @@ const readGeometryPoint = (cell: any, pointName: 'sourcePoint' | 'targetPoint'):
   const x = Number(point.$.x);
   const y = Number(point.$.y);
   return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+};
+
+const readGeometryWaypoints = (cell: any): { x: number; y: number }[] => {
+  const waypoints = cell?.mxGeometry?.[0]?.Array?.find((candidate: any) => candidate?.$?.as === 'points')?.mxPoint || [];
+  return waypoints
+    .map((point: any) => {
+      const x = Number(point?.$?.x);
+      const y = Number(point?.$?.y);
+      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+    })
+    .filter((point: { x: number; y: number } | undefined): point is { x: number; y: number } => point !== undefined);
 };
 
 const readGeometryBounds = (cell: any): { x: number; y: number; width: number; height: number } | undefined => {
@@ -338,6 +420,39 @@ const readGeometryBounds = (cell: any): { x: number; y: number; width: number; h
   return { x, y, width, height };
 };
 
+const getNodeCenter = (cell: any): { x: number; y: number } | undefined => {
+  const bounds = readGeometryBounds(cell);
+  if (!bounds) {
+    return undefined;
+  }
+
+  return {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  };
+};
+
+const getEdgePolyline = (edgeCell: any, rawCellMap: Map<string, any>): { x: number; y: number }[] => {
+  const attrs = edgeCell?.$ as DrawIOCell | undefined;
+  const points: { x: number; y: number }[] = [];
+
+  const sourceCell = attrs?.source ? rawCellMap.get(attrs.source) : undefined;
+  const sourcePoint = readGeometryPoint(edgeCell, 'sourcePoint') || getNodeCenter(sourceCell);
+  if (sourcePoint) {
+    points.push(sourcePoint);
+  }
+
+  points.push(...readGeometryWaypoints(edgeCell));
+
+  const targetCell = attrs?.target ? rawCellMap.get(attrs.target) : undefined;
+  const targetPoint = readGeometryPoint(edgeCell, 'targetPoint') || getNodeCenter(targetCell);
+  if (targetPoint) {
+    points.push(targetPoint);
+  }
+
+  return points;
+};
+
 const isPointInBounds = (
   point: { x: number; y: number },
   bounds: { x: number; y: number; width: number; height: number }
@@ -349,6 +464,27 @@ const isPointInBounds = (
     point.y >= bounds.y - tolerance &&
     point.y <= bounds.y + bounds.height + tolerance
   );
+};
+
+const isPointNearSegment = (
+  point: { x: number; y: number },
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): boolean => {
+  const tolerance = 12;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(point.x - start.x, point.y - start.y) <= tolerance;
+  }
+
+  const projection = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy);
+  const clamped = Math.max(0, Math.min(1, projection));
+  const nearestX = start.x + clamped * dx;
+  const nearestY = start.y + clamped * dy;
+
+  return Math.hypot(point.x - nearestX, point.y - nearestY) <= tolerance;
 };
 
 // Parse DrawIO style string and apply to shape
