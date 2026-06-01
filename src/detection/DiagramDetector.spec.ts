@@ -96,7 +96,7 @@ describe('DiagramDetector', () => {
 
       const defaultAnalysis = await DetectorFactory.analyzeFile(filePath, buffer);
       const strictAnalysis = await DetectorFactory.analyzeFile(filePath, buffer, {
-        fallbackFlowchartConfidence: 80,
+        drawioFallbackFlowchartConfidence: 80,
       });
 
       expect(defaultAnalysis.detectedType).toBe(DiagramType.COMPONENT);

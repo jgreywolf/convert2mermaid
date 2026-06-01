@@ -80,12 +80,12 @@ convert2mermaid [options]
   -o, --outputFile <path>                输出文件路径
   -f, --outputFormat <mmd|md>            输出格式，默认 mmd
   -d, --diagramType <type>               预留参数，用于显式图类型
-  -ffc, --fallbackFlowchartConfidence    DrawIO 回退阈值，默认 50
+  -dffc, --drawioFallbackFlowchartConfidence    DrawIO 回退阈值，默认 50
 ```
 
 ### DrawIO 回退阈值
 
-`-ffc` / `--fallbackFlowchartConfidence` 用于控制 DrawIO 图类型检测遇到模糊图形时的处理方式。
+`-dffc` / `--drawioFallbackFlowchartConfidence` 用于控制 DrawIO 图类型检测遇到模糊图形时的处理方式。
 
 DrawIO 文件里经常只有普通矩形、椭圆、文本和箭头，并没有明确的图类型语义。当类图、组件图、序列图、状态图、ER 图、网络图等专用类型的检测置信度低于这个百分比时，转换器会改用 Mermaid `flowchart`。这通常更容易渲染成功，因为 Mermaid flowchart 对普通节点和连线结构更宽容。
 
@@ -96,10 +96,10 @@ DrawIO 文件里经常只有普通矩形、椭圆、文本和箭头，并没有�
 convert2mermaid -i diagram.drawio -o diagram.mmd
 
 # 专用图类型需要更高置信度，否则回退为 flowchart
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 70
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 70
 
 # 允许较低置信度也进入专用图类型生成
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 30
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 30
 ```
 
 ## 作为 npm 包使用
@@ -111,7 +111,7 @@ import { convertToMermaid, parseDiagram, generateMermaidCode } from 'convert2mer
 
 const result = await convertToMermaid('diagram.drawio', {
   outputFormat: 'mmd',
-  fallbackFlowchartConfidence: 50,
+  drawioFallbackFlowchartConfidence: 50,
 });
 
 console.log(result.mermaid);
@@ -135,7 +135,7 @@ if (parsed) {
 ```ts
 const result = await convertToMermaid('diagram.puml', {
   outputFormat: 'md',
-  fallbackFlowchartConfidence: 60,
+  drawioFallbackFlowchartConfidence: 60,
 });
 ```
 
@@ -144,7 +144,7 @@ const result = await convertToMermaid('diagram.puml', {
 ```ts
 {
   outputFormat?: 'mmd' | 'md';
-  fallbackFlowchartConfidence?: number;
+  drawioFallbackFlowchartConfidence?: number;
   silent?: boolean;
 }
 ```
@@ -165,7 +165,7 @@ const result = await convertToMermaid('diagram.puml', {
 
 ```ts
 const diagram = await parseDiagram('diagram.drawio', {
-  fallbackFlowchartConfidence: 50,
+  drawioFallbackFlowchartConfidence: 50,
 });
 ```
 
@@ -210,7 +210,7 @@ convert2mermaid -i diagram.drawio -o diagram.mmd
 convert2mermaid -i diagram.drawio -o diagram.md -f md
 
 # 提高 DrawIO 模糊图形的回退阈值
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 80
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 80
 ```
 
 ### PlantUML `.puml`、`.plantuml`
@@ -295,7 +295,7 @@ Detection evidence:
 Diagram metadata: 4 shapes, 3 edges
 ```
 
-对于 DrawIO，未知或低置信度的专用图类型可以通过 `fallbackFlowchartConfidence` 回退为 `flowchart`。
+对于 DrawIO，未知或低置信度的专用图类型可以通过 `drawioFallbackFlowchartConfidence` 回退为 `flowchart`。
 
 ## 输出格式
 
@@ -369,7 +369,7 @@ import { convertToMermaid } from 'convert2mermaid';
 
 const { mermaid, analysis } = await convertToMermaid('docs/architecture.drawio', {
   outputFormat: 'mmd',
-  fallbackFlowchartConfidence: 70,
+  drawioFallbackFlowchartConfidence: 70,
 });
 
 console.log(`Detected ${analysis?.detectedType} at ${analysis?.confidence}%`);

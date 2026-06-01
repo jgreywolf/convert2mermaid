@@ -374,7 +374,7 @@ export class DrawIODetector extends DiagramDetector {
   }
 
   private applyFlowchartFallback(analysis: DiagramAnalysis, options: DetectionOptions): DiagramAnalysis {
-    const threshold = options.fallbackFlowchartConfidence ?? DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE;
+    const threshold = options.drawioFallbackFlowchartConfidence ?? DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE;
 
     if (analysis.detectedType === DiagramType.FLOWCHART && analysis.confidence > 0) {
       return analysis;

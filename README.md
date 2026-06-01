@@ -80,12 +80,12 @@ Optional:
   -o, --outputFile <path>                Output file path
   -f, --outputFormat <mmd|md>            Output format, defaults to mmd
   -d, --diagramType <type>               Reserved for explicit diagram type usage
-  -ffc, --fallbackFlowchartConfidence    DrawIO fallback threshold, defaults to 50
+  -dffc, --drawioFallbackFlowchartConfidence    DrawIO fallback threshold, defaults to 50
 ```
 
 ### DrawIO Fallback Threshold
 
-`-ffc` / `--fallbackFlowchartConfidence` controls how DrawIO type detection handles ambiguous diagrams.
+`-dffc` / `--drawioFallbackFlowchartConfidence` controls how DrawIO type detection handles ambiguous diagrams.
 
 DrawIO files often contain generic rectangles, ellipses, text, and arrows without explicit semantic metadata. When a specialized type such as class, component, sequence, state, ER, or network is detected below the configured confidence percentage, the converter uses Mermaid `flowchart` instead. This usually produces more renderable output because Mermaid flowcharts tolerate generic node/edge structures better than specialized diagram syntaxes.
 
@@ -96,10 +96,10 @@ Examples:
 convert2mermaid -i diagram.drawio -o diagram.mmd
 
 # Require stronger specialized detection before leaving flowchart mode
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 70
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 70
 
 # Allow weaker specialized detection
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 30
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 30
 ```
 
 ## Library Usage
@@ -111,7 +111,7 @@ import { convertToMermaid, parseDiagram, generateMermaidCode } from 'convert2mer
 
 const result = await convertToMermaid('diagram.drawio', {
   outputFormat: 'mmd',
-  fallbackFlowchartConfidence: 50,
+  drawioFallbackFlowchartConfidence: 50,
 });
 
 console.log(result.mermaid);
@@ -135,7 +135,7 @@ Parses a source file, generates Mermaid syntax, and returns the diagram model, M
 ```ts
 const result = await convertToMermaid('diagram.puml', {
   outputFormat: 'md',
-  fallbackFlowchartConfidence: 60,
+  drawioFallbackFlowchartConfidence: 60,
 });
 ```
 
@@ -144,7 +144,7 @@ Options:
 ```ts
 {
   outputFormat?: 'mmd' | 'md';
-  fallbackFlowchartConfidence?: number;
+  drawioFallbackFlowchartConfidence?: number;
   silent?: boolean;
 }
 ```
@@ -165,7 +165,7 @@ Parses a source file and returns the internal diagram model without generating M
 
 ```ts
 const diagram = await parseDiagram('diagram.drawio', {
-  fallbackFlowchartConfidence: 50,
+  drawioFallbackFlowchartConfidence: 50,
 });
 ```
 
@@ -210,7 +210,7 @@ convert2mermaid -i diagram.drawio -o diagram.mmd
 convert2mermaid -i diagram.drawio -o diagram.md -f md
 
 # Raise fallback threshold for ambiguous DrawIO files
-convert2mermaid -i diagram.drawio -o diagram.mmd -ffc 80
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 80
 ```
 
 ### PlantUML `.puml`, `.plantuml`
@@ -295,7 +295,7 @@ Detection evidence:
 Diagram metadata: 4 shapes, 3 edges
 ```
 
-For DrawIO, unknown or low-confidence specialized detections can fall back to `flowchart` through the `fallbackFlowchartConfidence` option.
+For DrawIO, unknown or low-confidence specialized detections can fall back to `flowchart` through the `drawioFallbackFlowchartConfidence` option.
 
 ## Output Formats
 
@@ -369,7 +369,7 @@ import { convertToMermaid } from 'convert2mermaid';
 
 const { mermaid, analysis } = await convertToMermaid('docs/architecture.drawio', {
   outputFormat: 'mmd',
-  fallbackFlowchartConfidence: 70,
+  drawioFallbackFlowchartConfidence: 70,
 });
 
 console.log(`Detected ${analysis?.detectedType} at ${analysis?.confidence}%`);

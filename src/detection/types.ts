@@ -24,7 +24,7 @@ export interface DiagramAnalysis {
 }
 
 export interface DetectionOptions {
-  fallbackFlowchartConfidence?: number;
+  drawioFallbackFlowchartConfidence?: number;
   silent?: boolean;
 }
 

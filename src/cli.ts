@@ -17,7 +17,7 @@ program
   .option('-d, --diagramType [value]', 'Type of diagram', 'flowchart')
   .option('-o, --outputFile [value]', 'Output file name - defaults to input filename')
   .option('-f, --outputFormat [value]', "Output format: 'mmd' or 'md'", 'mmd')
-  .option('-ffc, --fallbackFlowchartConfidence [value]', 'Fallback to flowchart when DrawIO detection confidence is below this percentage', '50')
+  .option('-dffc, --drawioFallbackFlowchartConfidence [value]', 'Fallback to flowchart when DrawIO detection confidence is below this percentage', '50')
   .addHelpText('after', `
 Examples:
   # Run directly from TypeScript source (no build needed)
@@ -48,11 +48,11 @@ async function processFile(filepath: string) {
   const spinner = ora(`Processing ${filepath}`).start();
   const defaultExt = options.outputFormat === 'md' ? '.md' : '.mmd';
   const outputFilePath = options.outputFile || filepath.replace(fileExt, defaultExt);
-  const fallbackFlowchartConfidence = parseFallbackFlowchartConfidence();
+  const drawioFallbackFlowchartConfidence = parseDrawioFallbackFlowchartConfidence();
 
   try {
     const result = await convertToMermaid(filepath, {
-      fallbackFlowchartConfidence,
+      drawioFallbackFlowchartConfidence,
       outputFormat: options.outputFormat,
       silent: false,
     });
@@ -88,8 +88,8 @@ async function processFile(filepath: string) {
   process.exit(0);
 }
 
-function parseFallbackFlowchartConfidence(): number {
-  const rawValue = options.fallbackFlowchartConfidence;
+function parseDrawioFallbackFlowchartConfidence(): number {
+  const rawValue = options.drawioFallbackFlowchartConfidence;
   const parsed = Number(rawValue);
 
   if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
