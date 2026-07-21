@@ -4,6 +4,7 @@ import { parseStringPromise } from 'xml2js';
 import { Diagram, Shape, Style } from '../types.js';
 import { MermaidShape, getMermaidShapeByValue } from '../shapes/flowchartShapes.js';
 import { createDefaultStyle, mapArrowTypeToNumber } from '../utils/styleUtils.js';
+import { normalizeDrawIOXml } from '../utils/drawioUtils.js';
 
 export interface DrawIOCell {
   id: string;
@@ -21,7 +22,7 @@ export interface DrawIOCell {
 // Parse a DrawIO file and return a Diagram
 export const parseDiagram = async (filePath: string): Promise<Diagram> => {
   const buffer = fs.readFileSync(filePath);
-  const xmlContent = buffer.toString('utf-8');
+  const xmlContent = normalizeDrawIOXml(buffer.toString('utf-8'));
   const jsonObj = await parseStringPromise(xmlContent);
   const shapes = getShapes(jsonObj);
   return { Shapes: shapes };
@@ -57,10 +58,12 @@ export const getShapes = (jsonObj: any): Shape[] => {
     const edgeLabels = new Map<string, string>(); // Map edge ID to label
     const swimlanes = new Map<string, DrawIOCell>(); // Map swimlane ID to cell
     const swimlaneChildren = new Map<string, DrawIOCell[]>(); // Map parent ID to children
+    const rawCellMap = new Map<string, any>();
 
     for (const cell of cells) {
       const cellData = cell['$'] as DrawIOCell;
       cellMap.set(cellData.id, cellData);
+      rawCellMap.set(cellData.id, cell);
 
       // Identify swimlanes (class containers)
       if (cellData.style && cellData.style.includes('swimlane')) {
@@ -136,8 +139,9 @@ export const getShapes = (jsonObj: any): Shape[] => {
         Label: label,
         Style: createDefaultStyle(),
         IsEdge: cellData.edge === '1',
-        FromNode: cellData.source || '',
-        ToNode: cellData.target || '',
+        FromNode: cellData.source || resolveEndpointFromPoint(rawCellMap.get(id), rawCellMap, 'sourcePoint'),
+        ToNode: cellData.target || resolveEndpointFromPoint(rawCellMap.get(id), rawCellMap, 'targetPoint'),
+        ParentNode: cellData.parent || '',
       };
 
       // Parse style attributes
@@ -159,6 +163,12 @@ export const getShapes = (jsonObj: any): Shape[] => {
           .replace(/&#xa;/g, '\n') // Decode newline
           .replace(/&#xA;/g, '\n');
 
+        // Preserve structural HTML before stripping tags:
+        // Convert <br> variants to newlines (attribute/method line separators)
+        decodedLabel = decodedLabel.replace(/<br[^>]*>/gi, '\n');
+        // Convert <hr> variants to --- section separators (class name / attributes / methods)
+        decodedLabel = decodedLabel.replace(/<hr[^>]*>/gi, '\n---\n');
+
         // Extract and temporarily store stereotypes
         const stereotypes: string[] = [];
         decodedLabel = decodedLabel.replace(/<<([^>]+)>>/g, (match) => {
@@ -179,11 +189,302 @@ export const getShapes = (jsonObj: any): Shape[] => {
 
       shapes.push(shape);
     }
+
+    addInferredCalloutEdges(shapes, rawCellMap);
   } catch (e) {
     console.error('Error parsing DrawIO file:', e);
   }
 
   return shapes;
+};
+
+const addInferredCalloutEdges = (shapes: Shape[], rawCellMap: Map<string, any>): void => {
+  const connectedShapeIds = new Set<string>();
+  for (const shape of shapes) {
+    if (!shape.IsEdge) {
+      continue;
+    }
+    if (shape.FromNode) {
+      connectedShapeIds.add(shape.FromNode);
+    }
+    if (shape.ToNode) {
+      connectedShapeIds.add(shape.ToNode);
+    }
+  }
+
+  for (const callout of shapes.filter((shape) => !shape.IsEdge && isCalloutCell(rawCellMap.get(shape.Id)))) {
+    if (connectedShapeIds.has(callout.Id)) {
+      continue;
+    }
+
+    const target = findCalloutTarget(callout, shapes, rawCellMap);
+    if (!target) {
+      continue;
+    }
+
+    shapes.push({
+      Id: `${callout.Id}_callout_link`,
+      ShapeType: getMermaidShapeByValue('rectangle'),
+      Label: '',
+      Style: createDefaultStyle(),
+      IsEdge: true,
+      FromNode: callout.Id,
+      ToNode: target.Id,
+      ParentNode: callout.ParentNode,
+    });
+  }
+};
+
+const isCalloutCell = (cell: any): boolean => {
+  const style = String((cell?.$ as DrawIOCell | undefined)?.style || '').toLowerCase();
+  return style.includes('shape=callout') || style.includes('perimeter=calloutperimeter');
+};
+
+const findCalloutTarget = (callout: Shape, shapes: Shape[], rawCellMap: Map<string, any>): Shape | undefined => {
+  const calloutBounds = readGeometryBounds(rawCellMap.get(callout.Id));
+  if (!calloutBounds) {
+    return undefined;
+  }
+
+  const candidates = shapes
+    .filter((shape) => !shape.IsEdge && shape.Id !== callout.Id && !isCalloutCell(rawCellMap.get(shape.Id)))
+    .map((shape) => ({ shape, score: getCalloutTargetScore(calloutBounds, readGeometryBounds(rawCellMap.get(shape.Id))) }))
+    .filter((candidate): candidate is { shape: Shape; score: number } => candidate.score !== undefined)
+    .sort((left, right) => left.score - right.score);
+
+  return candidates[0]?.shape;
+};
+
+const getCalloutTargetScore = (
+  callout: { x: number; y: number; width: number; height: number },
+  target?: { x: number; y: number; width: number; height: number }
+): number | undefined => {
+  if (!target) {
+    return undefined;
+  }
+
+  const tolerance = 10;
+  const horizontalOverlap = getRangeOverlap(callout.x, callout.x + callout.width, target.x, target.x + target.width);
+  const verticalOverlap = getRangeOverlap(callout.y, callout.y + callout.height, target.y, target.y + target.height);
+  const verticalGap = Math.max(target.y - (callout.y + callout.height), callout.y - (target.y + target.height), 0);
+  const horizontalGap = Math.max(target.x - (callout.x + callout.width), callout.x - (target.x + target.width), 0);
+
+  if (horizontalOverlap > 0 && verticalGap <= tolerance) {
+    return verticalGap;
+  }
+
+  if (verticalOverlap > 0 && horizontalGap <= tolerance) {
+    return horizontalGap;
+  }
+
+  return undefined;
+};
+
+const getRangeOverlap = (leftStart: number, leftEnd: number, rightStart: number, rightEnd: number): number =>
+  Math.max(0, Math.min(leftEnd, rightEnd) - Math.max(leftStart, rightStart));
+
+const resolveEndpointFromPoint = (
+  edgeCell: any,
+  rawCellMap: Map<string, any>,
+  pointName: 'sourcePoint' | 'targetPoint',
+  visitedEdgeIds = new Set<string>()
+): string => {
+  const point = readGeometryPoint(edgeCell, pointName);
+  if (!point) {
+    return '';
+  }
+
+  for (const [id, rawCell] of rawCellMap.entries()) {
+    const attrs = rawCell?.$ as DrawIOCell | undefined;
+    if (!attrs || attrs.vertex !== '1') {
+      continue;
+    }
+
+    const bounds = readGeometryBounds(rawCell);
+    if (bounds && isPointInBounds(point, bounds)) {
+      return id;
+    }
+  }
+
+  const edgeId = String((edgeCell?.$ as DrawIOCell | undefined)?.id || '');
+  if (edgeId) {
+    visitedEdgeIds.add(edgeId);
+  }
+
+  const matchingEdge = findEdgeNearPoint(point, rawCellMap, visitedEdgeIds);
+  if (!matchingEdge) {
+    return '';
+  }
+
+  return pointName === 'targetPoint'
+    ? resolveEdgeTerminal(matchingEdge, rawCellMap, 'to', visitedEdgeIds)
+    : resolveEdgeTerminal(matchingEdge, rawCellMap, 'from', visitedEdgeIds);
+};
+
+const resolveEdgeTerminal = (
+  edgeCell: any,
+  rawCellMap: Map<string, any>,
+  direction: 'from' | 'to',
+  visitedEdgeIds: Set<string>
+): string => {
+  const attrs = edgeCell?.$ as DrawIOCell | undefined;
+  if (!attrs) {
+    return '';
+  }
+
+  if (direction === 'from' && attrs.source) {
+    return attrs.source;
+  }
+
+  if (direction === 'to' && attrs.target) {
+    return attrs.target;
+  }
+
+  const edgeId = String(attrs.id || '');
+  if (edgeId && visitedEdgeIds.has(edgeId)) {
+    return '';
+  }
+
+  const nextVisited = new Set(visitedEdgeIds);
+  if (edgeId) {
+    nextVisited.add(edgeId);
+  }
+
+  return resolveEndpointFromPoint(edgeCell, rawCellMap, direction === 'from' ? 'sourcePoint' : 'targetPoint', nextVisited);
+};
+
+const findEdgeNearPoint = (
+  point: { x: number; y: number },
+  rawCellMap: Map<string, any>,
+  visitedEdgeIds: Set<string>
+): any | undefined => {
+  for (const [id, rawCell] of rawCellMap.entries()) {
+    const attrs = rawCell?.$ as DrawIOCell | undefined;
+    if (!attrs || attrs.edge !== '1' || visitedEdgeIds.has(id)) {
+      continue;
+    }
+
+    const polyline = getEdgePolyline(rawCell, rawCellMap);
+    if (polyline.length < 2) {
+      continue;
+    }
+
+    for (let index = 0; index < polyline.length - 1; index += 1) {
+      if (isPointNearSegment(point, polyline[index], polyline[index + 1])) {
+        return rawCell;
+      }
+    }
+  }
+
+  return '';
+};
+
+const readGeometryPoint = (cell: any, pointName: 'sourcePoint' | 'targetPoint'): { x: number; y: number } | undefined => {
+  const points = cell?.mxGeometry?.[0]?.mxPoint || [];
+  const point = points.find((candidate: any) => candidate?.$?.as === pointName);
+  if (!point?.$) {
+    return undefined;
+  }
+
+  const x = Number(point.$.x);
+  const y = Number(point.$.y);
+  return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+};
+
+const readGeometryWaypoints = (cell: any): { x: number; y: number }[] => {
+  const waypoints = cell?.mxGeometry?.[0]?.Array?.find((candidate: any) => candidate?.$?.as === 'points')?.mxPoint || [];
+  return waypoints
+    .map((point: any) => {
+      const x = Number(point?.$?.x);
+      const y = Number(point?.$?.y);
+      return Number.isFinite(x) && Number.isFinite(y) ? { x, y } : undefined;
+    })
+    .filter((point: { x: number; y: number } | undefined): point is { x: number; y: number } => point !== undefined);
+};
+
+const readGeometryBounds = (cell: any): { x: number; y: number; width: number; height: number } | undefined => {
+  const geometry = cell?.mxGeometry?.[0]?.$;
+  if (!geometry) {
+    return undefined;
+  }
+
+  const x = Number(geometry.x);
+  const y = Number(geometry.y);
+  const width = Number(geometry.width);
+  const height = Number(geometry.height);
+
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return undefined;
+  }
+
+  return { x, y, width, height };
+};
+
+const getNodeCenter = (cell: any): { x: number; y: number } | undefined => {
+  const bounds = readGeometryBounds(cell);
+  if (!bounds) {
+    return undefined;
+  }
+
+  return {
+    x: bounds.x + bounds.width / 2,
+    y: bounds.y + bounds.height / 2,
+  };
+};
+
+const getEdgePolyline = (edgeCell: any, rawCellMap: Map<string, any>): { x: number; y: number }[] => {
+  const attrs = edgeCell?.$ as DrawIOCell | undefined;
+  const points: { x: number; y: number }[] = [];
+
+  const sourceCell = attrs?.source ? rawCellMap.get(attrs.source) : undefined;
+  const sourcePoint = readGeometryPoint(edgeCell, 'sourcePoint') || getNodeCenter(sourceCell);
+  if (sourcePoint) {
+    points.push(sourcePoint);
+  }
+
+  points.push(...readGeometryWaypoints(edgeCell));
+
+  const targetCell = attrs?.target ? rawCellMap.get(attrs.target) : undefined;
+  const targetPoint = readGeometryPoint(edgeCell, 'targetPoint') || getNodeCenter(targetCell);
+  if (targetPoint) {
+    points.push(targetPoint);
+  }
+
+  return points;
+};
+
+const isPointInBounds = (
+  point: { x: number; y: number },
+  bounds: { x: number; y: number; width: number; height: number }
+): boolean => {
+  const tolerance = 10;
+  return (
+    point.x >= bounds.x - tolerance &&
+    point.x <= bounds.x + bounds.width + tolerance &&
+    point.y >= bounds.y - tolerance &&
+    point.y <= bounds.y + bounds.height + tolerance
+  );
+};
+
+const isPointNearSegment = (
+  point: { x: number; y: number },
+  start: { x: number; y: number },
+  end: { x: number; y: number }
+): boolean => {
+  const tolerance = 12;
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+
+  if (dx === 0 && dy === 0) {
+    return Math.hypot(point.x - start.x, point.y - start.y) <= tolerance;
+  }
+
+  const projection = ((point.x - start.x) * dx + (point.y - start.y) * dy) / (dx * dx + dy * dy);
+  const clamped = Math.max(0, Math.min(1, projection));
+  const nearestX = start.x + clamped * dx;
+  const nearestY = start.y + clamped * dy;
+
+  return Math.hypot(point.x - nearestX, point.y - nearestY) <= tolerance;
 };
 
 // Parse DrawIO style string and apply to shape
@@ -281,6 +582,10 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
     }
   }
 
+  if (shape.IsEdge && !hasStyleKey(stylePairs, 'endArrow') && !hasStyleKey(stylePairs, 'startArrow')) {
+    shape.Style.EndArrow = 1;
+  }
+
   // Special handling for combined styles
   const combinedStyle = stylePairs.join(';').toLowerCase();
 
@@ -297,6 +602,9 @@ const parseDrawIOStyle = (styleString: string, shape: Shape): void => {
     shape.ShapeType = getMermaidShapeByValue('circle');
   }
 };
+
+const hasStyleKey = (stylePairs: string[], expectedKey: string): boolean =>
+  stylePairs.some((pair) => pair.split('=')[0].trim().toLowerCase() === expectedKey.toLowerCase());
 
 // Map DrawIO shape names to MermaidShape enum using getMermaidShapeByValue
 const mapDrawIOShapeToMermaid = (drawioShape: string): MermaidShape => {

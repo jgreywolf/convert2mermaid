@@ -25,3 +25,5 @@ temp.*
 fontawesome/
 *.min.js
 *.bundle.js
+
+tests/*.md

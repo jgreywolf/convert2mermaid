@@ -4,6 +4,7 @@ import * as drawioParser from './drawioParser.js';
 import * as excalidrawParser from './excalidrawParser.js';
 import * as plantumlParser from './plantumlParser.js';
 import { DetectorFactory } from '../detection/DetectorFactory.js';
+import { DetectionOptions } from '../detection/types.js';
 
 // Convert VisioShape from vsdx-js to our internal Shape interface
 const convertVisioShapeToShape = (visioShape: VisioShape): Shape => {
@@ -32,7 +33,7 @@ const convertVisioShapeToShape = (visioShape: VisioShape): Shape => {
   };
 };
 
-export async function parseData(filepath: string): Promise<Diagram | undefined> {
+export async function parseData(filepath: string, detectionOptions: DetectionOptions = {}): Promise<Diagram | undefined> {
   let diagram: Diagram | undefined = undefined;
 
   try {
@@ -73,10 +74,12 @@ export async function parseData(filepath: string): Promise<Diagram | undefined> 
     // Add diagram type detection analysis
     if (diagram && diagram.Shapes.length > 0) {
       try {
-        diagram.Analysis = await DetectorFactory.analyzeFile(filepath);
-        console.log(
-          `Detected diagram type: ${diagram.Analysis.detectedType} (confidence: ${diagram.Analysis.confidence}%)`
-        );
+        diagram.Analysis = await DetectorFactory.analyzeFile(filepath, undefined, detectionOptions);
+        if (!detectionOptions.silent) {
+          console.log(
+            `Detected diagram type: ${diagram.Analysis.detectedType} (confidence: ${diagram.Analysis.confidence}%)`
+          );
+        }
       } catch (detectionError) {
         console.warn('Could not analyze diagram type:', detectionError);
         // Fall back to shape-based analysis

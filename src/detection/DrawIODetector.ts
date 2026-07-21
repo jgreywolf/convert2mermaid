@@ -1,6 +1,30 @@
 import { DiagramDetector } from './DiagramDetector.js';
-import { DiagramType, DiagramAnalysis } from './types.js';
-import { parseStringPromise } from 'xml2js';
+import { DiagramType, DiagramAnalysis, DetectionOptions, DetectionPattern } from './types.js';
+import { normalizeDrawIOXml } from '../utils/drawioUtils.js';
+
+const DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE = 50;
+
+interface DrawIOCellInfo {
+  id: string;
+  value: string;
+  label: string;
+  style: string;
+  styleMap: Map<string, string>;
+  vertex: boolean;
+  edge: boolean;
+  source: string;
+  target: string;
+  parent: string;
+}
+
+interface DrawIOAnalysisContext {
+  xml: string;
+  cells: DrawIOCellInfo[];
+  vertices: DrawIOCellInfo[];
+  edges: DrawIOCellInfo[];
+  labels: string[];
+  shapeTypes: string[];
+}
 
 /**
  * DrawIO-specific diagram detection that analyzes raw XML structure
@@ -10,55 +34,57 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Analyzes DrawIO XML content for diagram type detection
    */
-  public async analyzeDrawIOFile(buffer: Buffer): Promise<DiagramAnalysis> {
+  public async analyzeDrawIOFile(buffer: Buffer, options: DetectionOptions = {}): Promise<DiagramAnalysis> {
     try {
-      // First, try to detect from raw XML structure
-      const xmlAnalysis = await this.analyzeXMLStructure(buffer);
-
-      // If we get a high-confidence result from XML, return it
-      if (xmlAnalysis.confidence >= 80) {
-        return xmlAnalysis;
+      const xmlContent = normalizeDrawIOXml(buffer.toString('utf-8'));
+      if (!xmlContent.includes('<mxfile') || !xmlContent.includes('<mxGraphModel')) {
+        return this.createUnknownAnalysis();
       }
 
-      // Otherwise, fall back to shape-based analysis
-      // This would require parsing the shapes first
-      return xmlAnalysis; // For now, return XML analysis
+      // First, try to detect from raw XML structure
+      const xmlAnalysis = await this.analyzeXMLStructure(xmlContent);
+
+      return this.applyFlowchartFallback(xmlAnalysis, options);
     } catch (error) {
       console.error('Error analyzing DrawIO file:', error);
-      return {
-        detectedType: DiagramType.UNKNOWN,
-        confidence: 0,
-        patterns: [],
-        metadata: {
-          totalShapes: 0,
-          totalEdges: 0,
-          shapeTypes: [],
-          hasSpecializedShapes: false,
-          hasDirectionalFlow: false,
-          hasHierarchy: false,
-          hasTemporal: false,
-          hasDataModel: false,
-          hasNetworkElements: false,
-        },
-      };
+      return this.createUnknownAnalysis();
     }
+  }
+
+  private createUnknownAnalysis(): DiagramAnalysis {
+    return {
+      detectedType: DiagramType.UNKNOWN,
+      confidence: 0,
+      patterns: [],
+      metadata: {
+        totalShapes: 0,
+        totalEdges: 0,
+        shapeTypes: [],
+        hasSpecializedShapes: false,
+        hasDirectionalFlow: false,
+        hasHierarchy: false,
+        hasTemporal: false,
+        hasDataModel: false,
+        hasNetworkElements: false,
+      },
+    };
   }
 
   /**
    * Analyzes the XML structure for diagram type patterns
    */
-  private async analyzeXMLStructure(buffer: Buffer): Promise<DiagramAnalysis> {
-    const xmlContent = buffer.toString('utf-8');
+  private async analyzeXMLStructure(xmlContent: string): Promise<DiagramAnalysis> {
+    const context = this.createAnalysisContext(xmlContent);
 
-    // Quick pattern matching on raw XML
+    // Analyze structured mxCell fields instead of scanning arbitrary XML text.
     const patterns = {
-      sequence: this.analyzeSequencePatterns(xmlContent),
-      class: this.analyzeClassPatterns(xmlContent),
-      state: this.analyzeStatePatterns(xmlContent),
-      component: this.analyzeComponentPatterns(xmlContent),
-      entityRelationship: this.analyzeERPatterns(xmlContent),
-      network: this.analyzeNetworkPatterns(xmlContent),
-      flowchart: this.analyzeFlowchartPatterns(xmlContent),
+      sequence: this.analyzeSequencePatterns(context),
+      class: this.analyzeClassPatterns(context),
+      state: this.analyzeStatePatterns(context),
+      component: this.analyzeComponentPatterns(context),
+      entityRelationship: this.analyzeERPatterns(context),
+      network: this.analyzeNetworkPatterns(context),
+      flowchart: this.analyzeFlowchartPatterns(context),
     };
 
     // Find the pattern with highest confidence
@@ -87,57 +113,155 @@ export class DrawIODetector extends DiagramDetector {
       detectedType: bestMatch.type,
       confidence: bestMatch.confidence,
       patterns: detectedPatterns,
-      metadata: this.extractXMLMetadata(xmlContent),
+      metadata: this.extractXMLMetadata(context),
     };
+  }
+
+  private createAnalysisContext(xml: string): DrawIOAnalysisContext {
+    const cells = this.extractCells(xml);
+    const vertices = cells.filter((cell) => cell.vertex);
+    const edges = cells.filter((cell) => cell.edge);
+
+    return {
+      xml,
+      cells,
+      vertices,
+      edges,
+      labels: cells.map((cell) => cell.label).filter((label) => label.length > 0),
+      shapeTypes: [
+        ...new Set(
+          cells
+            .map((cell) => cell.styleMap.get('shape') || this.getImplicitShapeType(cell.style))
+            .filter((shape): shape is string => Boolean(shape))
+        ),
+      ],
+    };
+  }
+
+  private extractCells(xml: string): DrawIOCellInfo[] {
+    const cells: DrawIOCellInfo[] = [];
+    const cellMatches = xml.matchAll(/<mxCell\b([^>]*?)(?:\/>|>)/g);
+
+    for (const match of cellMatches) {
+      const attrs = this.parseAttributes(match[1]);
+      const style = attrs.get('style') || '';
+      const value = attrs.get('value') || '';
+
+      cells.push({
+        id: attrs.get('id') || '',
+        value,
+        label: this.decodeLabel(value),
+        style,
+        styleMap: this.parseStyle(style),
+        vertex: attrs.get('vertex') === '1',
+        edge: attrs.get('edge') === '1',
+        source: attrs.get('source') || '',
+        target: attrs.get('target') || '',
+        parent: attrs.get('parent') || '',
+      });
+    }
+
+    return cells;
+  }
+
+  private parseAttributes(attributeText: string): Map<string, string> {
+    const attrs = new Map<string, string>();
+    const matches = attributeText.matchAll(/([\w:-]+)="([^"]*)"/g);
+
+    for (const match of matches) {
+      attrs.set(match[1], match[2]);
+    }
+
+    return attrs;
+  }
+
+  private parseStyle(style: string): Map<string, string> {
+    const styleMap = new Map<string, string>();
+    for (const part of style.split(';')) {
+      if (!part) continue;
+      const [key, value] = part.split('=');
+      if (key && value !== undefined) {
+        styleMap.set(key, value);
+      }
+    }
+    return styleMap;
+  }
+
+  private decodeLabel(value: string): string {
+    return value
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&amp;/g, '&')
+      .replace(/&#xa;/gi, '\n')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<hr\s*\/?>/gi, '\n---\n')
+      .replace(/<[^>]*>/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  private getImplicitShapeType(style: string): string {
+    const firstStylePart = style.split(';')[0] || '';
+    return firstStylePart.includes('=') ? '' : firstStylePart;
+  }
+
+  private hasStyle(cell: DrawIOCellInfo, ...patterns: string[]): boolean {
+    const style = cell.style.toLowerCase();
+    return patterns.some((pattern) => style.includes(pattern.toLowerCase()));
+  }
+
+  private hasLabel(context: DrawIOAnalysisContext, pattern: RegExp): boolean {
+    return context.labels.some((label) => pattern.test(label));
   }
 
   /**
    * Sequence diagram pattern detection
    */
-  private analyzeSequencePatterns(xml: string) {
+  private analyzeSequencePatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for UML actor shapes (flexible pattern matching)
-    if (xml.includes('shape=umlActor') || xml.includes('shape="umlActor"') || xml.includes("shape='umlActor'")) {
+    const actorShapes = context.vertices.filter((cell) => this.hasStyle(cell, 'shape=umlActor'));
+    if (actorShapes.length > 0) {
       evidence.push('Found UML actor shapes');
-      confidence += 30;
+      confidence += Math.min(35, actorShapes.length * 20);
     }
 
-    // Check for lifeline shapes (flexible pattern matching)
-    if (
-      xml.includes('targetShapes=umlLifeline') ||
-      xml.includes('targetShapes="umlLifeline"') ||
-      xml.includes("targetShapes='umlLifeline'") ||
-      xml.includes('umlLifeline')
-    ) {
+    const lifelineShapes = context.vertices.filter((cell) => this.hasStyle(cell, 'umlLifeline'));
+    if (lifelineShapes.length > 0) {
       evidence.push('Found UML lifeline shapes');
-      confidence += 35;
+      confidence += Math.min(45, lifelineShapes.length * 20);
     }
 
-    // Check for sequence-specific text
     const sequenceTerms = ['message', 'call', 'return', 'activate', 'deactivate', 'login', 'validate'];
+    let termCount = 0;
     for (const term of sequenceTerms) {
-      if (xml.toLowerCase().includes(term.toLowerCase())) {
-        evidence.push(`Found sequence terminology: ${term}`);
-        confidence += 8; // Increased from 5
+      if (context.labels.some((label) => label.toLowerCase().includes(term))) {
+        termCount++;
       }
     }
+    if (termCount > 0) {
+      evidence.push(`Found ${termCount} sequence terms`);
+      confidence += Math.min(20, termCount * 6);
+    }
 
-    // Check for temporal ordering patterns
-    if (xml.includes('chronologicallyOrdered')) {
+    if (context.cells.some((cell) => this.hasStyle(cell, 'chronologicallyOrdered'))) {
       evidence.push('Found chronological ordering');
       confidence += 20;
     }
 
-    // Check for message flow patterns (arrows between lifelines)
-    if (xml.includes('endArrow=block') || xml.includes('endArrow=open')) {
+    if (
+      (lifelineShapes.length > 0 || actorShapes.length > 0) &&
+      context.edges.some((cell) => this.hasStyle(cell, 'endArrow=block', 'endArrow=open'))
+    ) {
       evidence.push('Found message arrows');
       confidence += 15;
     }
 
-    // Check for dashed lines (return messages)
-    if (xml.includes('dashed=1') || xml.includes('dashed="1"')) {
+    if (
+      (lifelineShapes.length > 0 || actorShapes.length > 0) &&
+      context.edges.some((cell) => this.hasStyle(cell, 'dashed=1'))
+    ) {
       evidence.push('Found return message patterns');
       confidence += 10;
     }
@@ -153,76 +277,54 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Class diagram pattern detection
    */
-  private analyzeClassPatterns(xml: string) {
+  private analyzeClassPatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for UML class shapes (more flexible)
-    if (xml.includes('shape=umlClass') || xml.includes('swimlane') || xml.includes('shape="swimlane"')) {
+    const classShapes = context.vertices.filter((cell) => this.hasStyle(cell, 'shape=umlClass', 'swimlane'));
+    if (classShapes.length > 0) {
       evidence.push('Found UML class shapes');
-      confidence += 40;
+      confidence += Math.min(45, classShapes.length * 20);
     }
 
-    // Check for HTML-formatted class content (common in DrawIO class diagrams)
-    if (xml.includes('&lt;hr') && xml.includes('margin:0px')) {
+    const hasClassSections = context.vertices.some((cell) => cell.value.includes('&lt;hr') || cell.label.includes('---'));
+    if (hasClassSections) {
       evidence.push('Found HTML-formatted class content');
       confidence += 35;
     }
 
-    // Check for class notation patterns (|, +, -, #) - look for HTML entities too
-    if (
-      (xml.includes('|') || xml.includes('&vert;') || xml.includes('&lt;hr')) &&
-      (xml.includes('+') || xml.includes('-') || xml.includes('#') || xml.includes('&plus;') || xml.includes('&minus;'))
-    ) {
+    if (this.hasLabel(context, /(^|\s)[+#-]\w|\w+\([^)]*\)/)) {
       evidence.push('Found class attribute/method notation');
-      confidence += 30;
+      confidence += 25;
     }
 
-    // Check for method notation with parentheses and types
-    if (
-      (xml.includes('()') || xml.includes('&lpar;') || xml.includes('&rpar;')) &&
-      (xml.includes(': ') ||
-        xml.includes('boolean') ||
-        xml.includes('string') ||
-        xml.includes('int') ||
-        xml.includes('void'))
-    ) {
+    if (this.hasLabel(context, /\([^)]*\).*(boolean|string|int|void)|:\s*(boolean|string|int|void)/i)) {
       evidence.push('Found method notation with types');
       confidence += 25;
     }
 
-    // Check for data types commonly used in class diagrams
     const dataTypes = ['int', 'string', 'boolean', 'decimal', 'datetime', 'void'];
-    let typeCount = 0;
-    for (const type of dataTypes) {
-      if (xml.includes(type)) {
-        typeCount++;
-      }
-    }
+    const typeCount = dataTypes.filter((type) => context.labels.some((label) => label.toLowerCase().includes(type))).length;
     if (typeCount >= 2) {
       evidence.push(`Found ${typeCount} data types`);
       confidence += 20;
     }
 
-    // Check for inheritance/association arrows
-    if (xml.includes('endArrow=') && (xml.includes('triangle') || xml.includes('diamond') || xml.includes('block'))) {
+    if (context.edges.some((cell) => this.hasStyle(cell, 'endArrow=block', 'endArrow=diamond', 'endArrow=diamondThin', 'endArrow=openThin'))) {
       evidence.push('Found UML association arrows');
       confidence += 15;
     }
 
-    // Check for multiplicity
-    if (xml.includes('1..*') || xml.includes('0..1') || xml.includes('0..*') || xml.includes('*')) {
+    if (this.hasLabel(context, /\b(0\.\.\*|1\.\.\*|0\.\.1|1)\b|\*/)) {
       evidence.push('Found multiplicity notation');
       confidence += 15;
     }
 
-    // Check for class-related keywords
     const classTerms = ['class', 'interface', 'abstract', 'extends', 'implements'];
-    for (const term of classTerms) {
-      if (xml.toLowerCase().includes(term)) {
-        evidence.push(`Found class terminology: ${term}`);
-        confidence += 5;
-      }
+    const termCount = classTerms.filter((term) => context.labels.some((label) => label.toLowerCase().includes(term))).length;
+    if (termCount > 0) {
+      evidence.push(`Found ${termCount} class terms`);
+      confidence += Math.min(10, termCount * 3);
     }
 
     return {
@@ -236,35 +338,31 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * State diagram pattern detection
    */
-  private analyzeStatePatterns(xml: string) {
+  private analyzeStatePatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for state shapes
-    if (xml.includes('shape=startState') || xml.includes('shape=endState')) {
+    if (context.vertices.some((cell) => this.hasStyle(cell, 'shape=startState', 'shape=endState'))) {
       evidence.push('Found start/end state shapes');
-      confidence += 35;
+      confidence += 45;
     }
 
-    // Check for rounded rectangles (common in state diagrams)
-    if (xml.includes('rounded=1') || xml.includes('arcSize=')) {
+    const roundedStates = context.vertices.filter((cell) => this.hasStyle(cell, 'rounded=1', 'arcSize='));
+    if (roundedStates.length >= 3) {
       evidence.push('Found rounded state shapes');
-      confidence += 25;
+      confidence += Math.min(25, roundedStates.length * 5);
     }
 
-    // Check for state transition notation
-    if (xml.includes('[') && xml.includes(']') && xml.includes('/')) {
+    if (context.labels.some((label) => /(\[[^\]]+\]\s*\/|\S+\s*\/\s*\S+|when\s+)/i.test(label))) {
       evidence.push('Found state transition notation');
       confidence += 30;
     }
 
-    // Check for state keywords
     const stateTerms = ['idle', 'active', 'waiting', 'processing', 'transition'];
-    for (const term of stateTerms) {
-      if (xml.toLowerCase().includes(term)) {
-        evidence.push(`Found state terminology: ${term}`);
-        confidence += 5;
-      }
+    const termCount = stateTerms.filter((term) => context.labels.some((label) => label.toLowerCase().includes(term))).length;
+    if (termCount > 0) {
+      evidence.push(`Found ${termCount} state terms`);
+      confidence += Math.min(15, termCount * 4);
     }
 
     return {
@@ -275,33 +373,61 @@ export class DrawIODetector extends DiagramDetector {
     };
   }
 
+  private applyFlowchartFallback(analysis: DiagramAnalysis, options: DetectionOptions): DiagramAnalysis {
+    const threshold = options.drawioFallbackFlowchartConfidence ?? DEFAULT_FALLBACK_FLOWCHART_CONFIDENCE;
+
+    if (analysis.detectedType === DiagramType.FLOWCHART && analysis.confidence > 0) {
+      return analysis;
+    }
+
+    if (analysis.detectedType !== DiagramType.UNKNOWN && analysis.confidence >= threshold) {
+      return analysis;
+    }
+
+    const flowchartPattern = analysis.patterns.find((pattern) => pattern.type === DiagramType.FLOWCHART);
+    const fallbackPattern: DetectionPattern = flowchartPattern || {
+      type: DiagramType.FLOWCHART,
+      evidence: [`Fallback to flowchart because detection confidence was below ${threshold}%`],
+      weight: threshold,
+      confidence: Math.max(analysis.confidence, threshold),
+    };
+
+    return {
+      ...analysis,
+      detectedType: DiagramType.FLOWCHART,
+      confidence: fallbackPattern.confidence,
+      patterns: analysis.patterns.some((pattern) => pattern.type === DiagramType.FLOWCHART)
+        ? analysis.patterns
+        : [...analysis.patterns, fallbackPattern],
+    };
+  }
+
   /**
    * Component diagram pattern detection
    */
-  private analyzeComponentPatterns(xml: string) {
+  private analyzeComponentPatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for component shapes
-    if (xml.includes('shape=component') || xml.includes('shape=module')) {
+    const componentShapes = context.vertices.filter((cell) => this.hasStyle(cell, 'shape=component', 'shape=module'));
+    if (componentShapes.length > 0) {
       evidence.push('Found component shapes');
-      confidence += 40;
+      confidence += Math.min(45, componentShapes.length * 15);
     }
 
-    // Check for interface shapes (ellipses)
-    if (xml.includes('shape=ellipse') && xml.includes('interface')) {
+    if (
+      context.vertices.some((cell) => this.hasStyle(cell, 'ellipse') && cell.label.toLowerCase().includes('interface'))
+    ) {
       evidence.push('Found interface ellipses');
-      confidence += 30;
-    }
-
-    // Check for stereotype notation
-    if (xml.includes('&lt;&lt;') && xml.includes('&gt;&gt;')) {
-      evidence.push('Found stereotype notation');
       confidence += 20;
     }
 
-    // Check for dependency arrows (dashed lines)
-    if (xml.includes('dashed=1') || xml.includes('strokeDasharray')) {
+    if (this.hasLabel(context, /<<\s*(component|interface|module)\s*>>/i)) {
+      evidence.push('Found stereotype notation');
+      confidence += 30;
+    }
+
+    if (context.edges.some((cell) => this.hasStyle(cell, 'dashed=1', 'strokeDasharray') || /depends|uses/i.test(cell.label))) {
       evidence.push('Found dependency relationships');
       confidence += 15;
     }
@@ -317,50 +443,54 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Entity Relationship diagram pattern detection
    */
-  private analyzeERPatterns(xml: string) {
+  private analyzeERPatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for rectangle entities (but not if they're clearly other types)
-    const hasRectangles =
-      xml.includes('shape=rectangle') || xml.includes('shape="rectangle"') || xml.includes('shape=table');
-    const hasSpecializedShapes = xml.includes('umlActor') || xml.includes('umlClass') || xml.includes('component');
+    const relationships = context.vertices.filter((cell) => this.hasStyle(cell, 'shape=rhombus', 'shape=diamond'));
+    const attributes = context.vertices.filter(
+      (cell) => this.hasStyle(cell, 'ellipse') && !cell.label.toLowerCase().includes('interface')
+    );
+    const tables = context.vertices.filter((cell) => this.hasStyle(cell, 'shape=table', 'shape=partialRectangle'));
+    const chenEntities = context.vertices.filter(
+      (cell) =>
+        !cell.edge &&
+        !relationships.includes(cell) &&
+        !attributes.includes(cell) &&
+        this.hasStyle(cell, 'whiteSpace=wrap', 'align=center') &&
+        cell.label.length > 0
+    );
 
-    if (hasRectangles && !hasSpecializedShapes) {
-      evidence.push('Found entity rectangles');
-      confidence += 35;
+    if (tables.length > 0) {
+      evidence.push('Found table/entity shapes');
+      confidence += Math.min(40, tables.length * 20);
     }
 
-    // Check for relationship diamonds
-    if (xml.includes('shape=rhombus') || xml.includes('shape="rhombus"') || xml.includes('shape=diamond')) {
+    if (chenEntities.length >= 2 && relationships.length > 0) {
+      evidence.push('Found Chen-style entity rectangles');
+      confidence += Math.min(35, chenEntities.length * 8);
+    }
+
+    if (relationships.length > 0) {
       evidence.push('Found relationship diamonds');
-      confidence += 35; // Increased weight
+      confidence += Math.min(35, relationships.length * 20);
     }
 
-    // Check for attribute ellipses (but exclude interface ellipses)
-    if ((xml.includes('shape=ellipse') || xml.includes('shape="ellipse"')) && !xml.includes('interface')) {
+    if (attributes.length > 0 && (tables.length > 0 || relationships.length > 0)) {
       evidence.push('Found attribute ellipses');
-      confidence += 25;
+      confidence += Math.min(25, attributes.length * 8);
     }
 
-    // Check for cardinality notation
-    if (xml.includes('1:1') || xml.includes('1:M') || xml.includes('M:N') || xml.includes('1:N')) {
+    if (this.hasLabel(context, /\b(1:1|1:M|M:N|1:N|one to many|many to many|[MNP])\b/i)) {
       evidence.push('Found cardinality notation');
-      confidence += 30; // Increased weight
+      confidence += 30;
     }
 
-    // Check for ER-specific keywords
     const erTerms = ['entity', 'relationship', 'attribute', 'primary', 'foreign', 'key', 'table'];
-    for (const term of erTerms) {
-      if (xml.toLowerCase().includes(term)) {
-        evidence.push(`Found ER terminology: ${term}`);
-        confidence += 8;
-      }
-    }
-
-    // Reduce confidence if other specialized patterns are strongly present
-    if (xml.includes('umlActor') || xml.includes('targetShapes=umlLifeline')) {
-      confidence = Math.max(0, confidence - 30);
+    const termCount = erTerms.filter((term) => context.labels.some((label) => label.toLowerCase().includes(term))).length;
+    if (termCount > 0) {
+      evidence.push(`Found ${termCount} ER terms`);
+      confidence += Math.min(20, termCount * 5);
     }
 
     return {
@@ -374,34 +504,35 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Network diagram pattern detection
    */
-  private analyzeNetworkPatterns(xml: string) {
+  private analyzeNetworkPatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for Cisco shapes namespace
-    if (xml.includes('mxgraph.cisco') || xml.includes('cisco')) {
+    const ciscoShapes = context.vertices.filter((cell) => this.hasStyle(cell, 'mxgraph.cisco', 'cisco.'));
+    if (ciscoShapes.length > 0) {
       evidence.push('Found Cisco network shapes');
-      confidence += 40;
+      confidence += Math.min(45, ciscoShapes.length * 20);
     }
 
-    // Check for network device keywords
     const networkDevices = ['router', 'switch', 'firewall', 'server', 'hub'];
+    let deviceCount = 0;
     for (const device of networkDevices) {
-      if (xml.toLowerCase().includes(device)) {
-        evidence.push(`Found network device: ${device}`);
-        confidence += 10;
+      if (context.labels.some((label) => label.toLowerCase().includes(device))) {
+        deviceCount++;
       }
     }
+    if (deviceCount > 0) {
+      evidence.push(`Found ${deviceCount} network device labels`);
+      confidence += Math.min(25, deviceCount * 8);
+    }
 
-    // Check for IP addresses
     const ipPattern = /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/;
-    if (ipPattern.test(xml)) {
+    if (context.labels.some((label) => ipPattern.test(label))) {
       evidence.push('Found IP addresses');
       confidence += 30;
     }
 
-    // Check for VLAN terminology
-    if (xml.toLowerCase().includes('vlan') || xml.toLowerCase().includes('subnet')) {
+    if (this.hasLabel(context, /\b(vlan|subnet)\b/i)) {
       evidence.push('Found VLAN/subnet terminology');
       confidence += 20;
     }
@@ -417,37 +548,32 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Flowchart pattern detection (fallback)
    */
-  private analyzeFlowchartPatterns(xml: string) {
+  private analyzeFlowchartPatterns(context: DrawIOAnalysisContext) {
     const evidence = [];
     let confidence = 0;
 
-    // Check for basic flowchart shapes
-    if (xml.includes('shape=diamond') || xml.includes('shape=rhombus')) {
+    if (context.vertices.some((cell) => this.hasStyle(cell, 'shape=diamond', 'shape=rhombus'))) {
       evidence.push('Found decision diamonds');
       confidence += 30;
     }
 
-    if (xml.includes('shape=ellipse')) {
+    if (context.vertices.some((cell) => this.hasStyle(cell, 'ellipse'))) {
       evidence.push('Found start/end terminals');
       confidence += 25;
     }
 
-    if (xml.includes('shape=rectangle')) {
+    if (
+      context.vertices.some((cell) =>
+        this.hasStyle(cell, 'shape=rectangle', 'shape=process', 'rounded=0', 'whiteSpace=wrap')
+      )
+    ) {
       evidence.push('Found process rectangles');
       confidence += 20;
     }
 
-    // Check for arrows/flow
-    if (xml.includes('endArrow=') || xml.includes('arrow')) {
+    if (context.edges.some((cell) => this.hasStyle(cell, 'endArrow=', 'startArrow=')) || context.edges.length > 0) {
       evidence.push('Found directional flow');
       confidence += 15;
-    }
-
-    // This is the fallback, so reduce confidence if other patterns match
-    const hasSpecializedContent =
-      xml.includes('uml') || xml.includes('cisco') || xml.includes('actor') || xml.includes('lifeline');
-    if (hasSpecializedContent) {
-      confidence = Math.max(0, confidence - 20);
     }
 
     return {
@@ -461,30 +587,19 @@ export class DrawIODetector extends DiagramDetector {
   /**
    * Extract metadata from XML content
    */
-  private extractXMLMetadata(xml: string) {
-    // Count mxCell elements for shapes
-    const cellMatches = xml.match(/<mxCell/g) || [];
-    const edgeMatches = xml.match(/edge="1"/g) || [];
-
-    // Extract shape types from style attributes
-    const styleMatches = xml.match(/style="[^"]*"/g) || [];
-    const shapeTypes = styleMatches
-      .map((style) => {
-        const shapeMatch = style.match(/shape=([^;]+)/);
-        return shapeMatch ? shapeMatch[1] : null;
-      })
-      .filter((shape): shape is string => shape !== null);
-
+  private extractXMLMetadata(context: DrawIOAnalysisContext) {
     return {
-      totalShapes: cellMatches.length - edgeMatches.length,
-      totalEdges: edgeMatches.length,
-      shapeTypes: [...new Set(shapeTypes)],
-      hasSpecializedShapes: xml.includes('uml') || xml.includes('cisco'),
-      hasDirectionalFlow: xml.includes('endArrow=') || xml.includes('startArrow='),
-      hasHierarchy: xml.includes('parent=') && !xml.includes('parent="1"'),
-      hasTemporal: xml.toLowerCase().includes('sequence') || xml.toLowerCase().includes('time'),
-      hasDataModel: xml.includes('table') || xml.includes('entity'),
-      hasNetworkElements: xml.includes('cisco') || xml.includes('network'),
+      totalShapes: context.vertices.length,
+      totalEdges: context.edges.length,
+      shapeTypes: context.shapeTypes,
+      hasSpecializedShapes: context.cells.some((cell) => this.hasStyle(cell, 'uml', 'cisco', 'component')),
+      hasDirectionalFlow: context.edges.some((cell) => this.hasStyle(cell, 'endArrow=', 'startArrow=')),
+      hasHierarchy: context.cells.some((cell) => cell.parent && cell.parent !== '0' && cell.parent !== '1'),
+      hasTemporal: this.hasLabel(context, /\b(sequence|time|activate|deactivate)\b/i),
+      hasDataModel: this.hasLabel(context, /\b(table|entity|attribute|key)\b/i),
+      hasNetworkElements:
+        context.cells.some((cell) => this.hasStyle(cell, 'cisco', 'network')) ||
+        this.hasLabel(context, /\b(router|switch|server|firewall)\b/i),
     };
   }
 }

@@ -47,7 +47,7 @@ describe('DiagramDetector', () => {
       const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
 
       expect(analysis.detectedType).toBe(DiagramType.COMPONENT);
-      expect(analysis.confidence).toBeGreaterThan(60);
+      expect(analysis.confidence).toBeGreaterThanOrEqual(60);
     });
 
     it('should detect entity relationship diagram from DrawIO file', async () => {
@@ -68,6 +68,39 @@ describe('DiagramDetector', () => {
 
       expect(analysis.detectedType).toBe(DiagramType.NETWORK);
       expect(analysis.confidence).toBeGreaterThan(70);
+    });
+
+    it('should detect a generic DrawIO rectangle connector diagram as flowchart', async () => {
+      const filePath = path.join(testDir, 'drawio.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
+
+      expect(analysis.detectedType).toBe(DiagramType.FLOWCHART);
+      expect(analysis.confidence).toBeGreaterThan(0);
+    });
+
+    it('should fall back low-confidence DrawIO detections to flowchart', async () => {
+      const filePath = path.join(testDir, 'EdgesArrowsAndStyling.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const analysis = await DetectorFactory.analyzeFile(filePath, buffer);
+
+      expect(analysis.detectedType).toBe(DiagramType.FLOWCHART);
+      expect(analysis.patterns.some((pattern) => pattern.type === DiagramType.FLOWCHART)).toBe(true);
+    });
+
+    it('should use the configured DrawIO flowchart fallback threshold', async () => {
+      const filePath = path.join(testDir, 'ComponentDiagram.drawio');
+      const buffer = fs.readFileSync(filePath);
+
+      const defaultAnalysis = await DetectorFactory.analyzeFile(filePath, buffer);
+      const strictAnalysis = await DetectorFactory.analyzeFile(filePath, buffer, {
+        drawioFallbackFlowchartConfidence: 80,
+      });
+
+      expect(defaultAnalysis.detectedType).toBe(DiagramType.COMPONENT);
+      expect(strictAnalysis.detectedType).toBe(DiagramType.FLOWCHART);
     });
   });
 

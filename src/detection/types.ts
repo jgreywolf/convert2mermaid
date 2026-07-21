@@ -23,6 +23,11 @@ export interface DiagramAnalysis {
   metadata: DiagramMetadata;
 }
 
+export interface DetectionOptions {
+  drawioFallbackFlowchartConfidence?: number;
+  silent?: boolean;
+}
+
 export interface DetectionPattern {
   type: string;
   evidence: string[];

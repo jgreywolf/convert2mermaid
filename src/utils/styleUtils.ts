@@ -117,9 +117,13 @@ export const mapFillPatternToNumber = (pattern: string | undefined): number => {
  */
 export const getStyleStatement = (style: Style): string => {
   let styleStatement = '';
+  const fillForeground = sanitizeMermaidStyleValue(style.FillForeground);
+  const fillBackground = sanitizeMermaidStyleValue(style.FillBackground);
+  const lineColor = sanitizeMermaidStyleValue(style.LineColor);
+  const textColor = sanitizeMermaidStyleValue(style.TextColor) || (fillForeground ? '#000000' : '');
 
   // Handle fill properties
-  if (style.FillForeground && style.FillBackground && style.FillPattern !== undefined) {
+  if (fillForeground && fillBackground && style.FillPattern !== undefined) {
     switch (style.FillPattern) {
       case 0:
         // No fill
@@ -127,19 +131,19 @@ export const getStyleStatement = (style: Style): string => {
         break;
       case 1:
         // Solid fill, foreground color only
-        styleStatement += `fill: ${style.FillForeground},`;
+        styleStatement += `fill: ${fillForeground},`;
         break;
       case 2:
         // Horizontal stripes example (customize based on pattern type)
-        styleStatement += `background: repeating-linear-gradient(0deg, ${style.FillForeground}, ${style.FillForeground} 10px, ${style.FillBackground} 10px, ${style.FillBackground} 20px),`;
+        styleStatement += `background: repeating-linear-gradient(0deg, ${fillForeground}, ${fillForeground} 10px, ${fillBackground} 10px, ${fillBackground} 20px),`;
         break;
       case 6:
         // Crosshatch fill example
-        styleStatement += `background: repeating-linear-gradient(45deg, ${style.FillForeground}, ${style.FillForeground} 10px, ${style.FillBackground} 10px, ${style.FillBackground} 20px),`;
+        styleStatement += `background: repeating-linear-gradient(45deg, ${fillForeground}, ${fillForeground} 10px, ${fillBackground} 10px, ${fillBackground} 20px),`;
         break;
       // Add more cases here for different fill patterns
       default:
-        styleStatement += `fill: ${style.FillForeground},`; // Default solid fill
+        styleStatement += `fill: ${fillForeground},`; // Default solid fill
     }
   }
 
@@ -147,8 +151,12 @@ export const getStyleStatement = (style: Style): string => {
     styleStatement += `stroke-width: ${Math.round(style.LineWeight)},`; // LineWeight to stroke-width
   }
 
-  if (style.LineColor) {
-    styleStatement += `stroke: ${style.LineColor},`;
+  if (lineColor) {
+    styleStatement += `stroke: ${lineColor},`;
+  }
+
+  if (textColor) {
+    styleStatement += `color: ${textColor},`;
   }
 
   if (style.LinePattern) {
@@ -188,11 +196,23 @@ export const getStyleStatement = (style: Style): string => {
     }
   }
 
-  if (style.FillForeground && styleStatement.indexOf('fill') === -1) {
-    styleStatement += `fill: ${style.FillForeground},`;
+  if (fillForeground && styleStatement.indexOf('fill') === -1) {
+    styleStatement += `fill: ${fillForeground},`;
   }
 
   return styleStatement.trim().replace(/,$/, '');
+};
+
+export const sanitizeMermaidStyleValue = (value: string): string => {
+  if (!value) return '';
+
+  const trimmed = value.trim();
+  const lightDarkMatch = trimmed.match(/^light-dark\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)$/i);
+  if (lightDarkMatch) {
+    return sanitizeMermaidStyleValue(lightDarkMatch[1]);
+  }
+
+  return trimmed;
 };
 
 /**
@@ -209,7 +229,8 @@ export const buildEdgeStatement = (
   let endArrow = getArrow(style.EndArrow);
 
   // Sanitize the edge label text with special handling for edge labels
-  const sanitizedText = sanitizeEdgeLabelFn(text);
+  const sanitizedLabel = sanitizeEdgeLabelFn(text).replace(/^"|"$/g, '');
+  const sanitizedText = sanitizedLabel ? `|${sanitizedLabel.replace(/\|/g, ' ')}|` : '';
 
   switch (startArrow) {
     case '>':
@@ -224,16 +245,30 @@ export const buildEdgeStatement = (
     endArrow = '>';
   }
 
-  let { startStroke, endStroke } = getStroke(style.LinePattern);
-  if (startArrow === '' && sanitizedText === '') {
-    startStroke = '';
-  }
-
+  const stroke = getEdgeStroke(style.LinePattern);
   if (startArrow === '<' && endArrow === '') {
-    return `${end} ${endStroke}${sanitizedText}${startStroke}> ${start}`;
+    return `${end} -->${sanitizedText} ${start}`;
   }
 
-  return `${start} ${startArrow}${startStroke}${sanitizedText}${endStroke}${endArrow} ${end}`;
+  if (sanitizedText) {
+    return `${start} -->${sanitizedText} ${end}`;
+  }
+
+  if (startArrow === '' && endArrow === '') {
+    return `${start} --- ${end}`;
+  }
+
+  return `${start} ${startArrow}${stroke}${endArrow} ${end}`;
+};
+
+const getEdgeStroke = (linePattern: number): string => {
+  switch (linePattern) {
+    case 2:
+    case 3:
+      return '-.';
+    default:
+      return '--';
+  }
 };
 
 /**

@@ -3,312 +3,448 @@
 [![npm version](https://img.shields.io/npm/v/convert2mermaid.svg)](https://www.npmjs.com/package/convert2mermaid)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A powerful command-line tool that converts diagrams from multiple formats (Visio, DrawIO, Excalidraw, PlantUML) into [Mermaid](https://mermaid.js.org/) syntax. Perfect for maintaining documentation in version control, generating diagrams for markdown files, and converting legacy diagrams to modern formats.
+<p align="center">
+  <a href="README.md">English</a> |
+  <a href="README.zh.md">简体中文</a>
+</p>
 
-## 🚀 Features
+Convert diagrams from Visio, DrawIO, Excalidraw, and PlantUML into [Mermaid](https://mermaid.js.org/) syntax. The project can be used as a command-line converter or imported as an npm package by other Node.js/TypeScript modules.
 
--   **Universal Format Support**: Convert from Visio, DrawIO, Excalidraw, and PlantUML
--   **Smart Detection**: Automatically identifies diagram types with confidence scoring
--   **Comprehensive Diagram Types**: Supports flowcharts, class diagrams, sequence diagrams, state diagrams, and more
--   **Preserves Styling**: Maintains colors, line styles, arrows, and shape types
--   **CLI Interface**: Easy-to-use command-line tool
--   **Well-Tested**: 54+ passing tests with full backwards compatibility
+It is useful for keeping diagrams in version control, generating Mermaid blocks for Markdown documentation, and migrating existing diagram files into a text-based format.
 
-## 📦 Installation
+## Features
+
+- **Multiple input formats**: `.vsdx`, `.drawio`, `.excalidraw`, `.puml`, and `.plantuml`
+- **Multiple Mermaid targets**: `flowchart`, `classDiagram`, `sequenceDiagram`, `stateDiagram-v2`, `block-beta`, `erDiagram`, `gantt`, `mindmap`, and `timeline`
+- **CLI and npm package usage**: run conversions from the terminal or call the parser/generator from application code
+- **TypeScript declarations**: package exports include generated `.d.ts` files
+- **Diagram type detection**: source files are analyzed with confidence scores before Mermaid generation
+- **DrawIO flowchart fallback**: ambiguous DrawIO diagrams can fall back to Mermaid `flowchart`
+- **Shape and style preservation**: labels, common shapes, colors, line styles, arrows, and fills are preserved where possible
+
+## Installation
+
+Install as a dependency:
 
 ```bash
-# Clone the repository
+npm install convert2mermaid
+```
+
+Install globally if you want the `convert2mermaid` command available in your shell:
+
+```bash
+npm install -g convert2mermaid
+```
+
+For local development:
+
+```bash
 git clone https://github.com/jgreywolf/convert2mermaid.git
 cd convert2mermaid
-
-# Install dependencies
 npm install
-
-# Build the project
 npm run build
 ```
 
-## 🎯 Quick Start
+## Quick Start
+
+After installing globally or using the built package:
 
 ```bash
-# Basic conversion
-node ./dist/index.js -i input-diagram.drawio -o output.mmd
-
-# Let it auto-detect output filename
-node ./dist/index.js -i my-diagram.puml
-
-# Specify output format (defaults to .mmd)
-node ./dist/index.js -i diagram.vsdx -o result.md -f md
+convert2mermaid -i input.drawio -o output.mmd
 ```
 
-## 📖 Usage
-
-### Command Line Options
+From this repository:
 
 ```bash
-node ./dist/index.js [options]
+# Run the built CLI. Requires npm run build first.
+npm start -- -i tests/drawio.drawio -f mmd
+
+# Run TypeScript source during development.
+npm run dev -- -i tests/drawio.drawio -f md
+
+# Call the built CLI directly.
+node dist/cli.js -i tests/drawio.drawio -o tests/drawio.mmd
+```
+
+If `--outputFile` is not provided, the output path is derived from the input filename and `--outputFormat`.
+
+## Command Line Usage
+
+```text
+convert2mermaid [options]
 
 Required:
-  -i, --inputFile <path>        Path to input diagram file
+  -i, --inputFile <path>                 Input diagram file
 
 Optional:
-  -o, --outputFile <path>       Output file path (defaults to input filename with .mmd extension)
-  -f, --format <format>         Output format: 'mmd' or 'md' (defaults to 'mmd')
-  -d, --diagramType <type>      Force specific diagram type (usually auto-detected)
+  -o, --outputFile <path>                Output file path
+  -f, --outputFormat <mmd|md>            Output format, defaults to mmd
+  -d, --diagramType <type>               Reserved for explicit diagram type usage
+  -dffc, --drawioFallbackFlowchartConfidence    DrawIO fallback threshold, defaults to 50
 ```
 
-## 🎨 Supported Formats
+### DrawIO Fallback Threshold
 
-### 📐 Excalidraw (.excalidraw)
+`-dffc` / `--drawioFallbackFlowchartConfidence` controls how DrawIO type detection handles ambiguous diagrams.
 
-**Diagram Types:**
+DrawIO files often contain generic rectangles, ellipses, text, and arrows without explicit semantic metadata. When a specialized type such as class, component, sequence, state, ER, or network is detected below the configured confidence percentage, the converter uses Mermaid `flowchart` instead. This usually produces more renderable output because Mermaid flowcharts tolerate generic node/edge structures better than specialized diagram syntaxes.
 
--   ✅ Flowcharts
--   ✅ Basic diagrams with shapes and connectors
-
-**Features:**
-
--   Shape type recognition (rectangles, circles, diamonds, etc.)
--   Connector/arrow preservation
--   Text label extraction
--   Hand-drawn aesthetic intent preserved where possible
-
-**Example:**
+Examples:
 
 ```bash
-node ./dist/index.js -i sketch.excalidraw -o output.mmd
+# Default fallback threshold: 50
+convert2mermaid -i diagram.drawio -o diagram.mmd
+
+# Require stronger specialized detection before leaving flowchart mode
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 70
+
+# Allow weaker specialized detection
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 30
 ```
 
----
+## Library Usage
 
-### 📊 DrawIO (.drawio)
+The package exports parser and generator helpers from `dist/index.js`.
 
-**Diagram Types:**
+```ts
+import { convertToMermaid, parseDiagram, generateMermaidCode } from 'convert2mermaid';
 
--   ✅ **Flowcharts** - Process flows, decision trees
--   ✅ **Class Diagrams** - UML classes with attributes and methods
--   ✅ **Sequence Diagrams** - Lifelines, actors, messages, activations, frames (par/alt/loop/opt)
--   ✅ **State Diagrams** - States, transitions, initial/final states
--   ✅ **Component Diagrams** - Components, packages, dependencies
--   ✅ **Entity-Relationship Diagrams** - Entities, relationships, attributes
--   ✅ **Network Diagrams** - Network nodes, connections, infrastructure
+const result = await convertToMermaid('diagram.drawio', {
+  outputFormat: 'mmd',
+  drawioFallbackFlowchartConfidence: 50,
+});
 
-**Features:**
+console.log(result.mermaid);
+console.log(result.analysis?.detectedType);
+console.log(result.analysis?.confidence);
 
--   **Swimlane aggregation** - Automatically combines class members within swimlanes
--   **Advanced shape mapping** - 50+ shape types supported
--   **Style preservation** - Colors, line styles, arrows, fills
--   **UML notation support** - Stereotypes (<<interface>>, <<abstract>>)
--   **HTML entity decoding** - Properly handles formatted content
--   **Activation boxes** - Sequence diagram activation regions
--   **Frame detection** - Recognizes par, alt, loop, opt constructs
+const parsed = await parseDiagram('diagram.drawio');
 
-**Supported Shapes:**
+if (parsed) {
+  const mermaid = generateMermaidCode(parsed);
+  console.log(mermaid);
+}
+```
 
--   Basic: rectangles, circles, ellipses, diamonds, triangles, hexagons
--   Flowchart: process, decision, document, database, delay, display, manual input, stored data
--   UML: actors, lifelines, frames, notes
--   Specialized: cylinders, parallelograms, trapezoids, cloud, paper tape
+### API Reference
 
-**Examples:**
+#### `convertToMermaid(filepath, options?)`
+
+Parses a source file, generates Mermaid syntax, and returns the diagram model, Mermaid output, and optional detection analysis.
+
+```ts
+const result = await convertToMermaid('diagram.puml', {
+  outputFormat: 'md',
+  drawioFallbackFlowchartConfidence: 60,
+});
+```
+
+Options:
+
+```ts
+{
+  outputFormat?: 'mmd' | 'md';
+  drawioFallbackFlowchartConfidence?: number;
+  silent?: boolean;
+}
+```
+
+Returns:
+
+```ts
+{
+  diagram: Diagram;
+  mermaid: string;
+  analysis?: DiagramAnalysis;
+}
+```
+
+#### `parseDiagram(filepath, options?)`
+
+Parses a source file and returns the internal diagram model without generating Mermaid.
+
+```ts
+const diagram = await parseDiagram('diagram.drawio', {
+  drawioFallbackFlowchartConfidence: 50,
+});
+```
+
+#### `generateMermaidCode(diagram)`
+
+Generates Mermaid syntax from an already parsed diagram object.
+
+#### `parseData(filepath, options?)`
+
+Lower-level parser entry point used internally by the CLI and API. Most callers should prefer `parseDiagram` or `convertToMermaid`.
+
+## Supported Formats
+
+### DrawIO `.drawio`
+
+Supported targets:
+
+- **Flowcharts**: process flows, decisions, documents, databases, data stores, manual inputs, and generic connected shapes
+- **Class diagrams**: UML-style classes, attributes, methods, stereotypes, and relationships
+- **Sequence diagrams**: actors, participants, lifelines, messages, activation-like regions, and frame labels such as `par`, `alt`, `loop`, and `opt`
+- **State diagrams**: states, transitions, initial states, final states, and basic state labels
+- **Component diagrams**: components, modules, packages, containers, and dependencies
+- **Entity-relationship diagrams**: entities, attributes, relationships, and cardinality-like labels
+- **Network diagrams**: network devices, server-like nodes, cloud nodes, and infrastructure connections
+
+DrawIO detection is heuristic. It reads structured `mxCell` data including labels, styles, edge relationships, geometry, parent/child grouping, and shape hints. Some shapes are semantically useful, for example `umlActor`, `umlLifeline`, `startState`, `endState`, `module`, `component`, `entity`, and Cisco/network shapes. Generic rectangles and arrows are intentionally handled conservatively.
+
+Supported shape categories include:
+
+- Basic: rectangles, rounded rectangles, circles, ellipses, diamonds, triangles, hexagons
+- Flowchart: process, decision, document, database, delay, display, manual input, stored data
+- UML: actors, lifelines, frames, notes, components, modules
+- Specialized: cylinders, parallelograms, trapezoids, clouds, paper tape, network device shapes
+
+Examples:
 
 ```bash
-# Class diagram with swimlanes
-node ./dist/index.js -i class-diagram.drawio -o classes.mmd
+# Generic DrawIO diagram
+convert2mermaid -i diagram.drawio -o diagram.mmd
 
-# Sequence diagram with actors and messages
-node ./dist/index.js -i sequence.drawio -o sequence.mmd
+# DrawIO to Markdown with a Mermaid code block
+convert2mermaid -i diagram.drawio -o diagram.md -f md
 
-# State diagram
-node ./dist/index.js -i state-machine.drawio -o states.mmd
+# Raise fallback threshold for ambiguous DrawIO files
+convert2mermaid -i diagram.drawio -o diagram.mmd -dffc 80
 ```
 
----
+### PlantUML `.puml`, `.plantuml`
 
-### 🌿 PlantUML (.puml, .plantuml)
+Supported targets:
 
-**Diagram Types:**
+- **Class diagrams**: classes, interfaces, abstract classes, enumerations, attributes, methods, visibility modifiers, stereotypes, and UML relationships
+- **Component diagrams**: components, packages, databases, nodes, and dependency-style relationships
+- **State diagrams**: states, transitions, initial/final states, and common transition labels
+- **Sequence diagrams**: participants, actors, messages, activations, and common message arrows
+- **Use case diagrams**: actors, use cases, include/extend-style relationships
+- **Activity diagrams**: activities, decisions, start/stop nodes, and simple flows
+- **Gantt charts**: basic tasks, milestones, and durations
 
--   ✅ **Class Diagrams** - Classes, interfaces, abstract classes, enumerations
--   ✅ **Component Diagrams** - Components, packages, databases
--   ✅ **State Diagrams** - States, transitions, initial/final states
--   ✅ **Use Case Diagrams** - Actors, use cases, includes/extends relationships
--   ✅ **Sequence Diagrams** - Participants, actors, messages, activations
--   ✅ **Activity Diagrams** - Activities, decisions, start/stop nodes
--   ✅ **Gantt Charts** - Tasks, milestones, durations (basic support)
+Common UML relationship mappings include:
 
-**Features:**
+- `--|>` inheritance
+- `..|>` implementation
+- `o--` aggregation
+- `*--` composition
+- `-->` association/dependency-style links
 
--   **Full UML notation support**:
-    -   Visibility modifiers: `+` (public), `-` (private), `#` (protected), `~` (package)
-    -   Relationships: `--|>` (inheritance), `..|>` (implementation), `o--` (aggregation), `*--` (composition)
-    -   Stereotypes: `<<interface>>`, `<<abstract>>`, `<<enumeration>>`
--   **Modular parser architecture** - Type-specific parsing for each diagram type
--   **Smart type detection** - Analyzes content and directives (@startuml, @startgantt)
--   **Comprehensive relationship handling** - Supports all UML relationship types with cardinality
-
-**Class Diagram Output:**
-Converts to Mermaid `classDiagram` syntax with proper UML notation
-
-**Component Diagram Output:**
-Converts to Mermaid `block-beta` syntax
-
-**State Diagram Output:**
-Converts to Mermaid `stateDiagram-v2` syntax
-
-**Examples:**
+Examples:
 
 ```bash
-# Class diagram with full UML notation
-node ./dist/index.js -i class-model.puml -o classes.mmd
-
-# Component architecture diagram
-node ./dist/index.js -i architecture.puml -o components.mmd
-
-# State machine
-node ./dist/index.js -i state-machine.puml -o states.mmd
-
-# Sequence diagram
-node ./dist/index.js -i sequence.puml -o sequence.mmd
-
-# Use case diagram
-node ./dist/index.js -i use-cases.puml -o usecases.mmd
+convert2mermaid -i class-model.puml -o class-model.mmd
+convert2mermaid -i sequence.puml -o sequence.md -f md
+convert2mermaid -i architecture.plantuml -o architecture.mmd
 ```
 
----
+### Visio `.vsdx`
 
-### 📁 Visio (.vsdx)
+Visio support focuses on basic shape and connector conversion:
 
-**Diagram Types:**
+- Flowchart-like pages
+- Basic diagrams with shapes and connectors
+- Text labels on shapes and connectors
+- Basic style preservation where the parser exposes useful metadata
 
--   ✅ **Flowcharts** - Basic process flows
--   ✅ **Basic diagrams** - Shapes and connectors
-
-**Features:**
-
--   Shape and connector conversion
--   Text label extraction
--   Basic styling preservation
-
-**Example:**
+Example:
 
 ```bash
-node ./dist/index.js -i flowchart.vsdx -o output.mmd
+convert2mermaid -i flowchart.vsdx -o flowchart.mmd
 ```
 
-## 🧠 Smart Detection Engine
+### Excalidraw `.excalidraw`
 
-The tool includes an intelligent diagram type detection system:
+Excalidraw support focuses on sketch-style diagrams:
 
--   **Confidence Scoring** - Each detection includes a confidence percentage
--   **Multi-Pattern Analysis** - Examines shapes, relationships, and flow patterns
--   **Content-Aware Parsing** - Recognizes UML relationships, stereotypes, temporal sequences
--   **Automatic Format Detection** - Identifies diagram type from file content
+- Rectangles, diamonds, ellipses, and other basic elements
+- Connectors and arrows
+- Text label extraction
+- Flowchart-style Mermaid output
 
-**Detection Output Example:**
+Example:
 
+```bash
+convert2mermaid -i sketch.excalidraw -o sketch.mmd
 ```
-Detected diagram type: class (95% confidence)
+
+## Detection Engine
+
+The detection layer analyzes diagram content before generation and attaches analysis metadata to the parsed diagram.
+
+Detection considers:
+
+- File type and parser result
+- Shape styles and semantic shape names
+- Edge count, direction, and connectivity
+- Labels that look like UML members, stereotypes, participants, states, or ER attributes
+- Parent/child grouping such as swimlanes, containers, packages, and modules
+- Known PlantUML directives such as `@startuml` and `@startgantt`
+
+Example CLI output:
+
+```text
+Detected diagram type: flowchart (35% confidence)
 
 Detection evidence:
-  - class: Found @startuml directive, Found explicit class diagram directive (95%)
+  - flowchart: Found generic nodes and directed edges (35%)
 
-Diagram metadata: 40 shapes, 12 edges
+Diagram metadata: 4 shapes, 3 edges
 ```
 
-## 📊 Output Formats
+For DrawIO, unknown or low-confidence specialized detections can fall back to `flowchart` through the `drawioFallbackFlowchartConfidence` option.
+
+## Output Formats
+
+### `.mmd`
+
+Writes raw Mermaid syntax:
+
+```mermaid
+flowchart TD
+  A["Start"] --> B["End"]
+```
+
+### `.md`
+
+Writes a Markdown file containing a Mermaid fenced code block:
+
+````markdown
+```mermaid
+flowchart TD
+  A["Start"] --> B["End"]
+```
+````
 
 ### Mermaid Syntax Generated
 
-Depending on the detected diagram type, the tool generates appropriate Mermaid syntax:
+- Flowcharts: `flowchart TD` or `flowchart LR`
+- Class diagrams: `classDiagram`
+- Sequence diagrams: `sequenceDiagram`
+- State diagrams: `stateDiagram-v2`
+- Component diagrams: `block-beta`
+- ER diagrams: `erDiagram`
+- Gantt charts: `gantt`
+- Mind maps: `mindmap`
+- Timelines: `timeline`
 
--   **Class Diagrams** → `classDiagram`
--   **State Diagrams** → `stateDiagram-v2`
--   **Component Diagrams** → `block-beta`
--   **Sequence Diagrams** → `sequenceDiagram`
--   **Flowcharts** → `flowchart TD` / `flowchart LR`
--   **ER Diagrams** → `erDiagram`
+## Advanced Usage
 
-### Output File Formats
+### Convert Multiple Files
 
--   `.mmd` - Pure Mermaid syntax
--   `.md` - Markdown with Mermaid code blocks
+PowerShell:
 
-## 🔧 Advanced Usage
-
-### Force Specific Diagram Type
-
-```bash
-node ./dist/index.js -i diagram.drawio -o output.mmd -d class
+```powershell
+Get-ChildItem diagrams -Filter *.drawio | ForEach-Object {
+  convert2mermaid -i $_.FullName -o "output/$($_.BaseName).mmd"
+}
 ```
 
-### Batch Conversion
+Bash:
 
 ```bash
-# Convert all PlantUML files in a directory
 for file in diagrams/*.puml; do
-  node ./dist/index.js -i "$file" -o "output/$(basename "$file" .puml).mmd"
+  convert2mermaid -i "$file" -o "output/$(basename "$file" .puml).mmd"
 done
 ```
 
-### Use in Scripts
+### Use in Build Scripts
 
-```bash
-#!/bin/bash
-# Convert and commit diagrams
-node ./dist/index.js -i architecture.drawio -o docs/architecture.mmd
-git add docs/architecture.mmd
-git commit -m "Update architecture diagram"
+```json
+{
+  "scripts": {
+    "diagrams": "convert2mermaid -i docs/architecture.drawio -o docs/architecture.mmd"
+  }
+}
 ```
 
-## 🧪 Testing
+### Programmatic Conversion
+
+```ts
+import { writeFile } from 'node:fs/promises';
+import { convertToMermaid } from 'convert2mermaid';
+
+const { mermaid, analysis } = await convertToMermaid('docs/architecture.drawio', {
+  outputFormat: 'mmd',
+  drawioFallbackFlowchartConfidence: 70,
+});
+
+console.log(`Detected ${analysis?.detectedType} at ${analysis?.confidence}%`);
+await writeFile('docs/architecture.mmd', mermaid);
+```
+
+## Development
 
 ```bash
-# Run all tests
+npm install
+npm run build
 npm test
-
-# Run tests in watch mode
 npm run test:watch
-
-# Run specific test file
-npm test -- src/parser/plantumlParser.spec.ts
+npm run dev -- -i tests/drawio.drawio -f mmd
 ```
 
-## 🏗️ Architecture
+Package validation:
 
-The tool uses a modular architecture:
-
+```bash
+npm pack --dry-run --json
 ```
+
+`npm pack` and `npm publish` run `npm run build` first through the `prepack` script.
+
+## Project Structure
+
+```text
 src/
-├── index.ts                 # CLI entry point
-├── parser/                  # Format-specific parsers
-│   ├── drawioParser.ts      # DrawIO XML parser
-│   ├── plantumlParser.ts    # PlantUML text parser
-│   ├── excalidrawParser.ts  # Excalidraw JSON parser
-│   └── visioParser.ts       # Visio VSDX parser
-├── generators/              # Mermaid syntax generators
-│   ├── classDiagramGenerator.ts
-│   ├── stateDiagramGenerator.ts
-│   ├── blockDiagramGenerator.ts
-│   └── flowchartGenerator.ts
-├── detection/               # Smart diagram type detection
-│   ├── DrawIODetector.ts
-│   ├── PlantUMLDetector.ts
-│   └── DiagramDetector.ts
-├── utils/                   # Utility functions
-│   ├── labelUtils.ts
-│   ├── classUtils.ts
-│   ├── relationshipUtils.ts
-│   └── styleUtils.ts
-└── shapes/                  # Shape type mappings
-    └── flowchartShapes.ts
+├── index.ts                 Public package exports
+├── api.ts                   Library API: convertToMermaid, parseDiagram, generateMermaidCode
+├── cli.ts                   Command-line entry used by the package bin
+├── scribe.ts                Dispatches parsed diagrams to Mermaid generators
+├── types.d.ts               Shared diagram model types
+├── parser/                  Format-specific parsers and parser dispatcher
+│   ├── BaseParser.ts        Shared parser base behavior
+│   ├── parser.ts            File extension dispatch and parseData entry point
+│   ├── drawioParser.ts      DrawIO XML parser
+│   ├── plantumlParser.ts    PlantUML text parser
+│   └── excalidrawParser.ts  Excalidraw JSON parser
+├── detection/               Diagram type detection
+│   ├── DetectorFactory.ts   Reads files and routes to the right detector
+│   ├── DiagramDetector.ts   Shared detection logic and common scoring
+│   ├── DrawIODetector.ts    DrawIO-specific heuristics and flowchart fallback
+│   ├── PlantUMLDetector.ts  PlantUML-specific heuristics
+│   ├── types.ts             Detection result and option types
+│   └── index.ts             Detection exports
+├── generators/              Mermaid syntax generators
+│   ├── flowchartGenerator.ts  Generates Mermaid flowchart syntax for generic node/edge diagrams
+│   ├── classGenerator.ts      Generates classDiagram syntax for UML-style classes and relationships
+│   ├── sequenceGenerator.ts   Generates sequenceDiagram syntax for participants and messages
+│   ├── stateGenerator.ts      Generates stateDiagram-v2 syntax for states and transitions
+│   ├── componentGenerator.ts  Generates block-beta syntax for component/module diagrams
+│   ├── erGenerator.ts         Generates erDiagram syntax for entities and relationships
+│   ├── ganttGenerator.ts      Generates Mermaid gantt syntax for simple schedules
+│   ├── mindmapGenerator.ts    Generates mindmap syntax for hierarchical diagrams
+│   ├── networkGenerator.ts    Generates flowchart-style output for network diagrams
+│   └── timelineGenerator.ts   Generates timeline syntax for ordered events
+├── shapes/                  Shape mappings and Mermaid shape helpers
+│   ├── flowchartShapes.ts
+│   └── shapeMappers.ts
+└── utils/                   Shared utility functions
+    ├── classUtils.ts
+    ├── errorUtils.ts
+    ├── labelUtils.ts
+    ├── relationshipUtils.ts
+    └── styleUtils.ts
 ```
 
-## 📚 Examples
+Test files live next to the code they validate and use the `*.spec.ts` suffix.
 
-### Example 1: Class Diagram Conversion
+## Examples
 
-**Input (PlantUML):**
+### PlantUML Class Diagram
+
+Input:
 
 ```plantuml
 @startuml
@@ -328,7 +464,7 @@ User ..|> Authenticatable : implements
 @enduml
 ```
 
-**Output (Mermaid):**
+Output:
 
 ```mermaid
 classDiagram
@@ -346,9 +482,9 @@ classDiagram
   User ..|> Authenticatable : implements
 ```
 
-### Example 2: State Diagram Conversion
+### PlantUML State Diagram
 
-**Input (PlantUML):**
+Input:
 
 ```plantuml
 @startuml
@@ -361,7 +497,7 @@ Error --> Idle : retry
 @enduml
 ```
 
-**Output (Mermaid):**
+Output:
 
 ```mermaid
 stateDiagram-v2
@@ -373,65 +509,34 @@ stateDiagram-v2
   Error --> Idle : retry
 ```
 
-## 🐛 Known Limitations
+## Known Limitations
 
-1. **PlantUML Use Case Detection**: Global detector may identify use case diagrams as sequence diagrams (parser correctly processes them)
-2. **Gantt Syntax**: Basic support; full PlantUML Gantt syntax (sections, dateFormat) needs enhancement
-3. **Complex Nesting**: Very deeply nested structures may need manual adjustment
-4. **Multi-Page Diagrams**: Currently processes single page/diagram per file
+1. DrawIO does not always store explicit diagram type metadata, so detection is heuristic.
+2. Generic DrawIO shapes are ambiguous and may intentionally fall back to `flowchart`.
+3. Mermaid layout is not coordinate-based like DrawIO, Visio, or Excalidraw, so exact visual positioning is not preserved.
+4. Multi-page diagrams are not fully supported.
+5. Very complex PlantUML syntax may need manual adjustment after conversion.
+6. Gantt support is basic; advanced PlantUML Gantt features such as sections and date formatting may need additional work.
 
-## 🚀 Future Enhancements
+## Contributing
 
-### High Priority
+Contributions are welcome.
 
--   [ ] Full PlantUML Gantt syntax support
--   [ ] Multi-page diagram support
--   [ ] Enhanced use case detection
+1. Fork the repository.
+2. Create a feature branch.
+3. Add focused tests for behavior changes.
+4. Run `npm run build` and `npm test`.
+5. Open a pull request.
 
-### Medium Priority
+## License
 
--   [ ] Lucidchart support
--   [ ] Composite states in state diagrams
--   [ ] Object diagrams
--   [ ] Deployment diagrams
+MIT. See [LICENSE](LICENSE).
 
-### Low Priority
+## Acknowledgments
 
--   [ ] Gliffy support
--   [ ] Timing diagrams
--   [ ] Network diagram enhancements
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 👏 Acknowledgments
-
--   Built with [TypeScript](https://www.typescriptlang.org/)
--   Powered by [Mermaid.js](https://mermaid.js.org/)
--   Uses [vsdx-js](https://github.com/jgreywolf/vsdx-js) for Visio parsing
--   XML parsing with [xml2js](https://github.com/Leonidas-from-XIV/node-xml2js)
--   Testing with [Vitest](https://vitest.dev/)
-
-## 📧 Contact
-
--   GitHub: [@jgreywolf](https://github.com/jgreywolf)
--   Issues: [GitHub Issues](https://github.com/jgreywolf/convert2mermaid/issues)
-
-## 📊 Stats
-
--   **Formats Supported**: 4 (Visio, DrawIO, Excalidraw, PlantUML)
--   **Diagram Types**: 15+ types across all formats
--   **Shape Mappings**: 50+ shape types
--   **Test Coverage**: 54+ passing tests
--   **Dependencies**: Optimized to 144 packages (65% reduction)
+- Built with [TypeScript](https://www.typescriptlang.org/)
+- Mermaid syntax targets [Mermaid.js](https://mermaid.js.org/)
+- Uses [vsdx-js](https://github.com/jgreywolf/vsdx-js) for Visio parsing
+- XML parsing with [xml2js](https://github.com/Leonidas-from-XIV/node-xml2js)
+- CLI built with [commander](https://github.com/tj/commander.js)
+- Tests run with [Vitest](https://vitest.dev/)

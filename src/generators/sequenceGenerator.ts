@@ -2,7 +2,7 @@ import { Diagram, Shape } from '../types.js';
 import { sanitizeLabel } from '../utils/labelUtils.js';
 
 export const generateSequenceDiagram = (diagram: Diagram): string => {
-  let mermaidSyntax = 'sequenceDiagram\r\n';
+  let mermaidSyntax = 'sequenceDiagram\n';
 
   const participants: Shape[] = [];
   const actors: Shape[] = [];
@@ -87,10 +87,11 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
 
   const aliasMap = new Map<string, string>();
   const usedAliases = new Set<string>();
+  const declaredParticipants = [...actors, ...participants.filter((participant) => hasParticipantLabel(participant))];
 
   // Add autonumber if sequence numbers were detected
   if (hasSequenceNumbers) {
-    mermaidSyntax += '  autonumber\r\n\r\n';
+    mermaidSyntax += '  autonumber\n\n';
   }
 
   // Generate actor declarations first
@@ -99,17 +100,43 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     const alias = generateAlias(actorName, usedAliases);
     usedAliases.add(alias);
     aliasMap.set(actor.Id, alias);
-    mermaidSyntax += `  actor ${alias} as ${actorName}\r\n`;
+    mermaidSyntax += `  actor ${alias} as ${actorName}\n`;
   }
 
   // Generate participant declarations
-  for (const participant of participants) {
+  for (const participant of participants.filter((participant) => hasParticipantLabel(participant))) {
     const participantName = sanitizeLabel(participant.Label) || participant.Id;
     const alias = generateAlias(participantName, usedAliases);
     usedAliases.add(alias);
     aliasMap.set(participant.Id, alias);
-    mermaidSyntax += `  participant ${alias} as ${participantName}\r\n`;
+    mermaidSyntax += `  participant ${alias} as ${participantName}\n`;
   }
+
+  const unlabeledLifelines = participants.filter((participant) => !hasParticipantLabel(participant));
+  unlabeledLifelines.forEach((lifeline, index) => {
+    const owner = declaredParticipants[index];
+    const ownerAlias = owner ? aliasMap.get(owner.Id) : undefined;
+    if (ownerAlias) {
+      aliasMap.set(lifeline.Id, ownerAlias);
+    }
+  });
+
+  const activations = diagram.Shapes.filter((shape) => shape.ParticipantType === 'activation');
+  for (const activation of activations) {
+    const parentAlias = activation.ParentNode ? aliasMap.get(activation.ParentNode) : undefined;
+    if (parentAlias) {
+      aliasMap.set(activation.Id, parentAlias);
+    }
+  }
+
+  const unmappedActivations = activations.filter((activation) => !aliasMap.has(activation.Id));
+  unmappedActivations.forEach((activation, index) => {
+    const owner = declaredParticipants[index];
+    const ownerAlias = owner ? aliasMap.get(owner.Id) : undefined;
+    if (ownerAlias) {
+      aliasMap.set(activation.Id, ownerAlias);
+    }
+  });
 
   // Generate message flows
   for (const message of messages) {
@@ -118,15 +145,46 @@ export const generateSequenceDiagram = (diagram: Diagram): string => {
     const messageText = sanitizeLabel(message.Label) || '';
 
     // Map IDs to aliases
-    from = aliasMap.get(from) || from;
-    to = aliasMap.get(to) || to;
+    from = aliasMap.get(from) || ensureEndpointAlias(from, aliasMap, usedAliases);
+    to = aliasMap.get(to) || ensureEndpointAlias(to, aliasMap, usedAliases);
 
     if (from && to) {
       // Determine arrow type based on style
       const arrow = message.Style.LinePattern === 2 ? '-->' : '->';
-      mermaidSyntax += `  ${from}${arrow}${to}: ${messageText}\r\n`;
+      mermaidSyntax += `  ${from}${arrow}${to}: ${messageText}\n`;
     }
   }
 
   return mermaidSyntax;
 };
+
+const ensureEndpointAlias = (
+  id: string,
+  aliasMap: Map<string, string>,
+  usedAliases: Set<string>
+): string => {
+  if (!id) return '';
+
+  const existingAlias = aliasMap.get(id);
+  if (existingAlias) {
+    return existingAlias;
+  }
+
+  const base = sanitizeSequenceAlias(id);
+  let alias = base;
+  let counter = 1;
+  while (usedAliases.has(alias)) {
+    alias = `${base}${counter++}`;
+  }
+
+  usedAliases.add(alias);
+  aliasMap.set(id, alias);
+  return alias;
+};
+
+const sanitizeSequenceAlias = (id: string): string => {
+  const sanitized = id.replace(/[^a-zA-Z0-9_]/g, '_');
+  return /^[a-zA-Z_]/.test(sanitized) ? sanitized : `P_${sanitized}`;
+};
+
+const hasParticipantLabel = (shape: Shape): boolean => Boolean(shape.Label && shape.Label.trim().length > 0);
